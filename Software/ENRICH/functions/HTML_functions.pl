@@ -23,7 +23,7 @@ sub dump_all_genes
   my $pval ;
   my $case_counts;
   my $control_counts;
-  start_html($genehead_path,"./$user_dir/GENES.ejs");
+  start_html($genehead_path,"./$output_dir/GENES.ejs");
   foreach  $gene_matched_key  (keys %genes_matched)
   {
     @{$gene_counts{$gene_matched_key}} = count_genotypes($genes_matched{$gene_matched_key});

@@ -5,7 +5,7 @@ sub load_clinvar_5
 {my %clinvar5=();open(CLIN,"$_[0]");while($clin=<CLIN>){chomp($clin);@clin=split(/\t/,$clin);$clinvar5{$clin[0]} = $clin[1];}close(CLIN);return(%clinvar5);}
 
 sub load_gene_size
-{$total=0;open(GENE,"$_[0]");%gene_size=();my $genes="";my @genes=();while($genes = <GENE>){chomp($genes);@genes=split(/\t/,$genes);$gene_size{$genes[0]} = $genes[1];$total=$total+$genes[1];}return(%gene_size);}
+{$total=0;print "$_[0]\n";open(GENE,"$_[0]");%gene_size=();my $genes="";my @genes=();while($genes = <GENE>){chomp($genes);@genes=split(/\t/,$genes);$gene_size{$genes[0]} = $genes[1];$total=$total+$genes[1];}close(GENE);return(%gene_size);}
 
 sub load_gene_number_2_gene_name
 {my $file_path = $_[0];my  %hash =(); open(F,"$file_path"); my @f=(); my $f=""; while($f=<F>){@f=split(/\t/,$f);$hash{$f[0]}=$f[1];}close(F);return(%hash);}

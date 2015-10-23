@@ -16,8 +16,8 @@ $coordinates_path{"Exon"} = $local_path . "/COORDINATES/Exon";
 $coordinates_path{"Gene"} = $local_path . "/COORDINATES/Gene";
 $coordinates_path  = $coordinates_path{$coords};
 
-$size_path{"Exon"} = $local_path . "/sizes/Exon/Exonic_size.txt";
-$size_path{"Gene"} = $local_path . "/sizes/Exon/Genic_size.txt";
+$size_path{"Exon"} = $local_path . "/COORDINATES/Exon/Gene_size.txt";
+$size_path{"Gene"} = $local_path . "/COORDINATES/Exon/Gene_size.txt";
 $size_path  = $size_path{$coords};
 
 $ontology_path{"Exon"} = $local_path . "/ontologies/Exon";

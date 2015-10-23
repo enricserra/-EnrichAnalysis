@@ -17,7 +17,8 @@ sub fisher_test_controls
 {my $accumulated_p_val=0;my @table_2_x_2=@_;$table_2_x_2 [0]=$table_2_x_2[0]-1;$table_2_x_2[1] =$table_2_x_2[1]+1;while($table_2_x_2[0]>=0 and $table_2_x_2[3]>=0){$accumulated_p_val=$accumulated_p_val+hypergeometric(@table_2_x_2);$table_2_x_2[1]=$table_2_x_2[1]+1;$table_2_x_2[0]=$table_2_x_2[0]-1;$table_2_x_2[2]++;$table_2_x_2[3]--;}return(1- $accumulated_p_val);}
 
 sub fisher_enrichment
-{my $n = $_[3];
+{
+my $n = $_[3];
 my $k = $_[0]-1;
 my $p = $_[1]/$_[2];
 my $bin;

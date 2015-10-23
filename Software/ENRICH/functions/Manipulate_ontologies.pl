@@ -27,13 +27,15 @@ $genes_case_mutated++;
 }
 
 sub get_pval_enrichment
-{my $size = $_[0];  my $ont_descriptor=$_[1];
+{
+  my $size = $_[0];  
+  my $ont_descriptor=$_[1];
   my @genes = @_[2..(scalar(@_)-1)];
-  my $universe_size = $universe{$ont_descriptor}{$coords}*scalar(@rel_cases_pos);
+
+  my $universe_size = ($universe{$ont_descriptor}{$coords}*scalar(@cases)*2)+1;
   my $i=0;
   my $case_counts= 0;
   my $this_particular_case_counts = 0;
- 
  while($i<@genes)
   {
  $this_particular_case_counts = @{$gene_counts{$genes[$i]}}[0];
@@ -41,9 +43,11 @@ sub get_pval_enrichment
    $case_counts = $case_counts + $this_particular_case_counts;
    $i++;
  }
- $case_size = $size * scalar(@rel_cases_pos)*2;
+ 
+ $case_size = $size * scalar(@cases)*2;
  $drawn = $vars_matched +$vars_not_matched;
  my $pval = fisher_enrichment($case_counts,$case_size,$universe_size,$drawn);chomp($pval);
+ 
  return($pval,$case_counts,"",$genes_case_mutated);
 }
 
@@ -60,7 +64,7 @@ sub analysis_over_ontology
  my $control_count;
  my $genes_case_mutated;
  open_file_and_dump_it_to_OUT($headers{$ont_descriptor});
- open_results_file($user_dir,$ont_descriptor); 
+ open_results_file($output_dir,$ont_descriptor); 
  foreach $key (keys  %ont_hash)
  {
    %specific_ontology = ontology2hash($ont_hash{$key});

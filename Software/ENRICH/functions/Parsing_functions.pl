@@ -1,10 +1,18 @@
 
 sub Clean_and_sort_vcf_file
-		{  open_vcf_or_gz_to_FILE($_[0]); open_to_OUT($_[1]); while(my $file=<FILE>){if($file =~ /^##/) {}elsif($file=~/^#/){%header_hash=create_header_hash($file);@cases=create_array_from_header_hash($cases);@controls=create_array_from_header_hash($controls);}else{$file = remove_chr_and_change_Y_M_MT_X($file); my @file = split(/\t/,$file);if(check_valid_chr($file[0])){insert_onto_array_of_chr($file[0],$file);}}}}
+		{  open_vcf_or_gz_to_FILE($_[0]); open_to_OUT($_[1]); while(my $file=<FILE>){if($file =~ /^##/) {}elsif($file=~/^#/){
+chomp($file);
+%header_hash = create_header_hash($file);
+     if($controls){@controls=create_array_from_header_hash($controls);}
+     if($cases){@cases=create_array_from_header_hash($cases);print "@cases\n";}
+     else{my @file = split(/\t/,$file);@cases = @file[9..(scalar(@file)-1)];$cases = join(",",@cases);@cases = create_array_from_header_hash($cases);}
+}
+else{$file = remove_chr_and_change_Y_M_MT_X($file); my @file = split(/\t/,$file);if(check_valid_chr($file[0])){insert_onto_array_of_chr($file[0],$file);}}}
+}
 	sub create_header_hash
- 			{my $header = $_[0]; chomp($header);my @header=split(/\t/,$header);my $i=0;my %header_hash=();while($i<@header){$header_hash{$header[$i]}=$i;$i++;}return(%header_hash);}
+ 			{my $header = $_[0]; chomp($header);my @header=split(/\t/,$header);my $i=0;%header_hash=();while($i<@header){$header_hash{$header[$i]}=$i;$i++;}return(%header_hash);}
 	sub create_array_from_header_hash
-			{my $samples = $_[0];my @samples = split(/,/,$samples);my @samples_cols = ();my $i=0;while($i<@samples){if(exists($header_hash{$samples[$i]})){push(@samples_cols,$header_hash{$samples[$i]});}$i++;}}
+			{my $samples = $_[0];my @samples = split(/,/,$samples);my @samples_cols = ();my $i=0;while($i<@samples){if($header_hash{$samples[$i]}){push(@samples_cols,$header_hash{$samples[$i]});}$i++;}return(@samples_cols);}
 
 	sub open_vcf_or_gz_to_FILE
 			{@filename =  split(/\./,$_[0]);if(($filename[scalar(@filename)-1]  eq "gz") and ($filename[scalar(@filename)-2] eq "vcf")){open(FILE,"gunzip -c $_[0] |") or die "Could not open $_[0]\n";}elsif($filename[scalar(@filename)-1] eq "vcf"){ open(FILE,"$_[0]") or die "Could not open $_[0]\n";}else{die "Can not open $_[0] must be vcf or vcf.gz\n";}}

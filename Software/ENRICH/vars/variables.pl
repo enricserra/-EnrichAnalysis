@@ -7,13 +7,12 @@
         %vars_per_gene_control = ();
         %vars_per_gene_case = ();
         %genes_ = ();
-        @cases_pos = get_cols_from_samples($cases); @rel_cases_pos  = ();while($i<@cases_pos){push(@rel_cases_pos,($cases_pos[$i]-9));$i++;}
-        @controls_pos = get_cols_from_samples($controls);@rel_controls_pos  = ();$i=0;while($i<@controls_pos){push(@rel_controls_pos,($controls_pos[$i]-9));$i++;}
+        #@cases_pos = get_cols_from_samples($cases);@rel_cases_pos  = ();while($i<@cases_pos){push(@rel_cases_pos,($cases_pos[$i]-9));$i++;}
+        #@controls_pos = get_cols_from_samples($controls);@rel_controls_pos  = ();$i=0;while($i<@controls_pos){push(@rel_controls_pos,($controls_pos[$i]-9));$i++;}
         %gene_number_2_gene_name = load_gene_number_2_gene_name("$genes_path" . "/NCBI2GENE_NAME.txt");
-        $total_size = load_gene_size($size_path);
+        %gene_size = load_gene_size($size_path);
         %clinvar_hash = load_clinvar($clinvar_path);
         %clinvar5 = load_clinvar_5($clinvar_5_path);
-
 
 #Precomputed values to speed up.
 
@@ -40,7 +39,7 @@
         $universe{"KEGG"}{"Gene"} = "342862089";
         $universe{"REACTOME"}{"Exon"} = "12177250";
         $universe{"REACTOME"}{"Gene"} = "403972942";
-        $universe{"GOBP"}{"Exon"} = "26062875";
+        $universe{"GOBP"}{"Exon"} = "25950235";
         $universe{"GOBP"}{"Gene"} = "900091545";
         $universe{"GOCC"}{"Exon"} = "29077775";
         $universe{"GOCC"}{"Gene"} = "1006535370"; 
