@@ -59,6 +59,8 @@
 
   Clean_and_sort_vcf_file($input);
 
+        @cases_pos = get_cols_from_samples($cases);@rel_cases_pos  = ();while($i<@cases_pos){push(@rel_cases_pos,($cases_pos[$i]-9));$i++;}
+        @controls_pos = get_cols_from_samples($controls);@rel_controls_pos  = ();$i=0;while($i<@controls_pos){push(@rel_controls_pos,($controls_pos[$i]-9));$i++;}
 
 ####################################
 ##                                 #
