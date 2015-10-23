@@ -1,0 +1,2192 @@
+<!DOCTYPE html>
+<html>
+
+
+<script>
+function myFunction()
+{
+alert("These are the results for the Gene Ontology Cellular Component analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+ <% include ../../../results_header.ejs %>
+
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #4254B2;
+				border: 1px solid #99A8F3;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(189, 200, 255, 0.7);
+				border: 1px solid #6295BA; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #6295BA; }
+			.sortable a {
+				color: #192C8C; }
+	</style>
+<table class="sortable">
+<caption> GO Celular Component Table </caption>
+
+<tr>
+<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
+<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
+<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th> 
+<th scope="col"><p title="How many variants are found in this Ontology">Variants</p></th> 
+<th scope="col"><p title="How many genes are annotated in this ontology, or in a child of this ontology">Number of affected genes</p></th> 
+<th scope="col"><p title="Total number of genes that are in this ontology">Total Genes</p></th> 
+<th scope="col"><p title="Minimum level of the graph the ontology belongs to">GO Level</p></th> 
+<th scope="col"><p title="Biological meaning of this ontology">ONTOLOGY DESCRIPTION</p></th> 
+<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
+</tr>
+<tr>
+<td >0.0986945785207215</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033041#term=children"> GO:0033041 </a>
+</td><td >2</td><td >7513</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> </td><td >sweet taste receptor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008092#term=children"> GO:0008092 </a>
+</td><td >10</td><td >7518</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23207">PLEKHM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoskeletal protein binding</td></tr>
+<tr>
+<td >0.99999999090943</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016810#term=children"> GO:0016810 </a>
+</td><td >1</td><td >7519</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >hydrolase activity, acting on carbon-nitrogen (but not peptide) bonds</td></tr>
+<tr>
+<td >0.999999999999999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022803#term=children"> GO:0022803 </a>
+</td><td >28</td><td >7525</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >passive transmembrane transporter activity</td></tr>
+<tr>
+<td >0.999999999998989</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008234#term=children"> GO:0008234 </a>
+</td><td >2</td><td >7526</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >cysteine-type peptidase activity</td></tr>
+<tr>
+<td >0.929281805391459</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050840#term=children"> GO:0050840 </a>
+</td><td >5</td><td >7527</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >extracellular matrix binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070001#term=children"> GO:0070001 </a>
+</td><td >0</td><td >7527</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84301">DDI2
+</a> </td><td >aspartic-type peptidase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003712#term=children"> GO:0003712 </a>
+</td><td >12</td><td >7531</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >transcription cofactor activity</td></tr>
+<tr>
+<td >0.0685657384814162</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004616#term=children"> GO:0004616 </a>
+</td><td >2</td><td >7532</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> </td><td >phosphogluconate dehydrogenase (decarboxylating) activity</td></tr>
+<tr>
+<td >0.99982952500115</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003697#term=children"> GO:0003697 </a>
+</td><td >3</td><td >7533</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >single-stranded DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000989#term=children"> GO:0000989 </a>
+</td><td >12</td><td >7537</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >transcription factor binding transcription factor activity</td></tr>
+<tr>
+<td >0.999999999997135</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005539#term=children"> GO:0005539 </a>
+</td><td >5</td><td >7538</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >glycosaminoglycan binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022804#term=children"> GO:0022804 </a>
+</td><td >8</td><td >7540</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >active transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034450#term=children"> GO:0034450 </a>
+</td><td >0</td><td >7540</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> </td><td >ubiquitin-ubiquitin ligase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008324#term=children"> GO:0008324 </a>
+</td><td >2</td><td >7542</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >cation transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019899#term=children"> GO:0019899 </a>
+</td><td >17</td><td >7550</td><td ><p title=" "> 10 in total </p>
+</td><td >enzyme binding</td></tr>
+<tr>
+<td >0.861676945205912</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046625#term=children"> GO:0046625 </a>
+</td><td >2</td><td >7551</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >sphingolipid binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043168#term=children"> GO:0043168 </a>
+</td><td >53</td><td >7571</td><td ><p title=" "> 24 in total </p>
+</td><td >anion binding</td></tr>
+<tr>
+<td >0.892142486034059</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043274#term=children"> GO:0043274 </a>
+</td><td >1</td><td >7572</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >phospholipase binding</td></tr>
+<tr>
+<td >0.999999999178574</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003690#term=children"> GO:0003690 </a>
+</td><td >2</td><td >7573</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >double-stranded DNA binding</td></tr>
+<tr>
+<td >0.918417053731279</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043022#term=children"> GO:0043022 </a>
+</td><td >3</td><td >7574</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >ribosome binding</td></tr>
+<tr>
+<td >0.102311471010171</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004516#term=children"> GO:0004516 </a>
+</td><td >2</td><td >7575</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >nicotinate phosphoribosyltransferase activity</td></tr>
+<tr>
+<td >0.000192811461572462</td><td >0.762569330519087</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003951#term=children"> GO:0003951 </a>
+</td><td >4</td><td >7576</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> </td><td >NAD+ kinase activity</td></tr>
+<tr>
+<td >0.999999999608366</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033218#term=children"> GO:0033218 </a>
+</td><td >2</td><td >7577</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >amide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032561#term=children"> GO:0032561 </a>
+</td><td >1</td><td >7578</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >guanyl ribonucleotide binding</td></tr>
+<tr>
+<td >0.999999998924754</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042277#term=children"> GO:0042277 </a>
+</td><td >2</td><td >7579</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >peptide binding</td></tr>
+<tr>
+<td >0.87727604044666</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015280#term=children"> GO:0015280 </a>
+</td><td >1</td><td >7580</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ligand-gated sodium channel activity</td></tr>
+<tr>
+<td >0.124067811925964</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097001#term=children"> GO:0097001 </a>
+</td><td >2</td><td >7581</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >ceramide binding</td></tr>
+<tr>
+<td >0.999999953489651</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042054#term=children"> GO:0042054 </a>
+</td><td >2</td><td >7582</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >histone methyltransferase activity</td></tr>
+<tr>
+<td >0.999999999999566</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003924#term=children"> GO:0003924 </a>
+</td><td >1</td><td >7583</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >GTPase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015075#term=children"> GO:0015075 </a>
+</td><td >28</td><td >7589</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ion transmembrane transporter activity</td></tr>
+<tr>
+<td >0.999999999999972</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015081#term=children"> GO:0015081 </a>
+</td><td >1</td><td >7590</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >sodium ion transmembrane transporter activity</td></tr>
+<tr>
+<td >0.98345345020261</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030971#term=children"> GO:0030971 </a>
+</td><td >3</td><td >7591</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >receptor tyrosine kinase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032093#term=children"> GO:0032093 </a>
+</td><td >0</td><td >7591</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/148398">SAMD11
+</a> </td><td >SAM domain binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003779#term=children"> GO:0003779 </a>
+</td><td >5</td><td >7593</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >actin binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016757#term=children"> GO:0016757 </a>
+</td><td >2</td><td >7594</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >transferase activity, transferring glycosyl groups</td></tr>
+<tr>
+<td >0.260625296824522</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0002162#term=children"> GO:0002162 </a>
+</td><td >5</td><td >7595</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >dystroglycan binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022892#term=children"> GO:0022892 </a>
+</td><td >30</td><td >7602</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >substrate-specific transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019900#term=children"> GO:0019900 </a>
+</td><td >9</td><td >7606</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >kinase binding</td></tr>
+<tr>
+<td >0.883993865552079</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001540#term=children"> GO:0001540 </a>
+</td><td >2</td><td >7607</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >beta-amyloid binding</td></tr>
+<tr>
+<td >0.999999956406209</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001076#term=children"> GO:0001076 </a>
+</td><td >3</td><td >7608</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >RNA polymerase II transcription factor binding transcription factor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008200#term=children"> GO:0008200 </a>
+</td><td >0</td><td >7608</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> </td><td >ion channel inhibitor activity</td></tr>
+<tr>
+<td >0.999992582222528</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004197#term=children"> GO:0004197 </a>
+</td><td >2</td><td >7609</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >cysteine-type endopeptidase activity</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005247#term=children"> GO:0005247 </a>
+</td><td >24</td><td >7612</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >voltage-gated chloride channel activity</td></tr>
+<tr>
+<td >0.999999960908543</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0052689#term=children"> GO:0052689 </a>
+</td><td >1</td><td >7613</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >carboxylic ester hydrolase activity</td></tr>
+<tr>
+<td >0.279226729144325</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017057#term=children"> GO:0017057 </a>
+</td><td >1</td><td >7614</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >6-phosphogluconolactonase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005525#term=children"> GO:0005525 </a>
+</td><td >1</td><td >7615</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >GTP binding</td></tr>
+<tr>
+<td >0.999999999999928</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031267#term=children"> GO:0031267 </a>
+</td><td >7</td><td >7617</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >small GTPase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016289#term=children"> GO:0016289 </a>
+</td><td >0</td><td >7617</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >CoA hydrolase activity</td></tr>
+<tr>
+<td >0.000143228660972494</td><td >0.566469354146215</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004594#term=children"> GO:0004594 </a>
+</td><td >6</td><td >7618</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >pantothenate kinase activity</td></tr>
+<tr>
+<td >0.0586397534492126</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005031#term=children"> GO:0005031 </a>
+</td><td >4</td><td >7620</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/943">TNFRSF8
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >tumor necrosis factor-activated receptor activity</td></tr>
+<tr>
+<td >0.0370026574178657</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035620#term=children"> GO:0035620 </a>
+</td><td >2</td><td >7621</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >ceramide transporter activity</td></tr>
+<tr>
+<td >0.999995374384487</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005272#term=children"> GO:0005272 </a>
+</td><td >1</td><td >7622</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >sodium channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000988#term=children"> GO:0000988 </a>
+</td><td >12</td><td >7626</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >protein binding transcription factor activity</td></tr>
+<tr>
+<td >0.999999999972473</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008026#term=children"> GO:0008026 </a>
+</td><td >4</td><td >7627</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> </td><td >ATP-dependent helicase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016881#term=children"> GO:0016881 </a>
+</td><td >6</td><td >7630</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >acid-amino acid ligase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003676#term=children"> GO:0003676 </a>
+</td><td >38</td><td >7644</td><td ><p title=" "> 17 in total </p>
+</td><td >nucleic acid binding</td></tr>
+<tr>
+<td >0.000112145028344113</td><td >0.443533587100966</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005254#term=children"> GO:0005254 </a>
+</td><td >26</td><td >7648</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >chloride channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005083#term=children"> GO:0005083 </a>
+</td><td >5</td><td >7651</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >small GTPase regulator activity</td></tr>
+<tr>
+<td >0.556807883258709</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031005#term=children"> GO:0031005 </a>
+</td><td >1</td><td >7652</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >filamin binding</td></tr>
+<tr>
+<td >0.0370026574178657</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046624#term=children"> GO:0046624 </a>
+</td><td >2</td><td >7653</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >sphingolipid transporter activity</td></tr>
+<tr>
+<td >0.997794978266951</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016763#term=children"> GO:0016763 </a>
+</td><td >2</td><td >7654</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >transferase activity, transferring pentosyl groups</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004871#term=children"> GO:0004871 </a>
+</td><td >31</td><td >7667</td><td ><p title=" "> 14 in total </p>
+</td><td >signal transducer activity</td></tr>
+<tr>
+<td >0.999987426463971</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001085#term=children"> GO:0001085 </a>
+</td><td >3</td><td >7668</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >RNA polymerase II transcription factor binding</td></tr>
+<tr>
+<td >0.99971723905663</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048029#term=children"> GO:0048029 </a>
+</td><td >2</td><td >7669</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >monosaccharide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043169#term=children"> GO:0043169 </a>
+</td><td >60</td><td >7691</td><td ><p title=" "> 23 in total </p>
+</td><td >cation binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043167#term=children"> GO:0043167 </a>
+</td><td >97</td><td >7728</td><td ><p title=" "> 42 in total </p>
+</td><td >ion binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004091#term=children"> GO:0004091 </a>
+</td><td >0</td><td >7728</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >carboxylesterase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004540#term=children"> GO:0004540 </a>
+</td><td >0</td><td >7728</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >ribonuclease activity</td></tr>
+<tr>
+<td >0.998424096817377</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017048#term=children"> GO:0017048 </a>
+</td><td >7</td><td >7730</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >Rho GTPase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001067#term=children"> GO:0001067 </a>
+</td><td >5</td><td >7732</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >regulatory region nucleic acid binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042731#term=children"> GO:0042731 </a>
+</td><td >0</td><td >7732</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/148398">SAMD11
+</a> </td><td >PH domain binding</td></tr>
+<tr>
+<td >0.999502835109746</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032947#term=children"> GO:0032947 </a>
+</td><td >3</td><td >7733</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >protein complex scaffold</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008289#term=children"> GO:0008289 </a>
+</td><td >10</td><td >7739</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23207">PLEKHM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84069">PLEKHN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >lipid binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008270#term=children"> GO:0008270 </a>
+</td><td >17</td><td >7747</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388591">RNF207
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >zinc ion binding</td></tr>
+<tr>
+<td >0.00921850252719469</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015108#term=children"> GO:0015108 </a>
+</td><td >26</td><td >7751</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >chloride transmembrane transporter activity</td></tr>
+<tr>
+<td >0.96542150507172</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005179#term=children"> GO:0005179 </a>
+</td><td >4</td><td >7753</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >hormone activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005524#term=children"> GO:0005524 </a>
+</td><td >35</td><td >7764</td><td ><p title=" "> 13 in total </p>
+</td><td >ATP binding</td></tr>
+<tr>
+<td >0.792887571334268</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016813#term=children"> GO:0016813 </a>
+</td><td >1</td><td >7765</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >hydrolase activity, acting on carbon-nitrogen (but not peptide) bonds, in linear amidines</td></tr>
+<tr>
+<td >0.999471680231071</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022832#term=children"> GO:0022832 </a>
+</td><td >25</td><td >7769</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >voltage-gated channel activity</td></tr>
+<tr>
+<td >0.999999976665403</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003714#term=children"> GO:0003714 </a>
+</td><td >10</td><td >7772</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >transcription corepressor activity</td></tr>
+<tr>
+<td >0.532864901574549</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004033#term=children"> GO:0004033 </a>
+</td><td >2</td><td >7773</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >aldo-keto reductase (NADP) activity</td></tr>
+<tr>
+<td >0.99999981111426</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0018024#term=children"> GO:0018024 </a>
+</td><td >2</td><td >7774</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >histone-lysine N-methyltransferase activity</td></tr>
+<tr>
+<td >0.999999998967418</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022839#term=children"> GO:0022839 </a>
+</td><td >28</td><td >7780</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ion gated channel activity</td></tr>
+<tr>
+<td >0.999999999999992</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005216#term=children"> GO:0005216 </a>
+</td><td >28</td><td >7786</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ion channel activity</td></tr>
+<tr>
+<td >0.997259091660086</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031593#term=children"> GO:0031593 </a>
+</td><td >1</td><td >7787</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >polyubiquitin binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019787#term=children"> GO:0019787 </a>
+</td><td >6</td><td >7790</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >small conjugating protein ligase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004872#term=children"> GO:0004872 </a>
+</td><td >18</td><td >7799</td><td ><p title=" "> 10 in total </p>
+</td><td >receptor activity</td></tr>
+<tr>
+<td >0.999999999988275</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008757#term=children"> GO:0008757 </a>
+</td><td >2</td><td >7800</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >S-adenosylmethionine-dependent methyltransferase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0038023#term=children"> GO:0038023 </a>
+</td><td >18</td><td >7809</td><td ><p title=" "> 10 in total </p>
+</td><td >signaling receptor activity</td></tr>
+<tr>
+<td >0.999999999993186</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022834#term=children"> GO:0022834 </a>
+</td><td >3</td><td >7811</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ligand-gated channel activity</td></tr>
+<tr>
+<td >0.535124165877374</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043236#term=children"> GO:0043236 </a>
+</td><td >5</td><td >7812</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >laminin binding</td></tr>
+<tr>
+<td >0.152114771989569</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008475#term=children"> GO:0008475 </a>
+</td><td >2</td><td >7813</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >procollagen-lysine 5-dioxygenase activity</td></tr>
+<tr>
+<td >0.367842960877416</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008134#term=children"> GO:0008134 </a>
+</td><td >95</td><td >7829</td><td ><p title=" "> 17 in total </p>
+</td><td >transcription factor binding</td></tr>
+<tr>
+<td >0.938146052868214</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016645#term=children"> GO:0016645 </a>
+</td><td >2</td><td >7830</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >oxidoreductase activity, acting on the CH-NH group of donors</td></tr>
+<tr>
+<td >0.999999999999915</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008022#term=children"> GO:0008022 </a>
+</td><td >4</td><td >7832</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td >protein C-terminus binding</td></tr>
+<tr>
+<td >0.999983183346852</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0002039#term=children"> GO:0002039 </a>
+</td><td >2</td><td >7833</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >p53 binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016462#term=children"> GO:0016462 </a>
+</td><td >9</td><td >7837</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >pyrophosphatase activity</td></tr>
+<tr>
+<td >0.999999851325814</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051213#term=children"> GO:0051213 </a>
+</td><td >2</td><td >7838</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >dioxygenase activity</td></tr>
+<tr>
+<td >0.000350695478704477</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005253#term=children"> GO:0005253 </a>
+</td><td >26</td><td >7842</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >anion channel activity</td></tr>
+<tr>
+<td >0.0181970852178762</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004489#term=children"> GO:0004489 </a>
+</td><td >2</td><td >7843</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >methylenetetrahydrofolate reductase (NADPH) activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003674#term=children"> GO:0003674 </a>
+</td><td >282</td><td >7928</td><td ><p title=" "> 102 in total </p>
+</td><td >molecular_function</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043565#term=children"> GO:0043565 </a>
+</td><td >10</td><td >7932</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >sequence-specific DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005515#term=children"> GO:0005515 </a>
+</td><td >172</td><td >7980</td><td ><p title=" "> 57 in total </p>
+</td><td >protein binding</td></tr>
+<tr>
+<td >0.999999894488733</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016278#term=children"> GO:0016278 </a>
+</td><td >2</td><td >7981</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >lysine N-methyltransferase activity</td></tr>
+<tr>
+<td >0.999998308788038</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017171#term=children"> GO:0017171 </a>
+</td><td >7</td><td >7984</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >serine hydrolase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005085#term=children"> GO:0005085 </a>
+</td><td >5</td><td >7987</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >guanyl-nucleotide exchange factor activity</td></tr>
+<tr>
+<td >0.999999999993186</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015276#term=children"> GO:0015276 </a>
+</td><td >3</td><td >7989</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >ligand-gated ion channel activity</td></tr>
+<tr>
+<td >0.103767938860115</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008783#term=children"> GO:0008783 </a>
+</td><td >1</td><td >7990</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >agmatinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030554#term=children"> GO:0030554 </a>
+</td><td >56</td><td >8003</td><td ><p title=" "> 15 in total </p>
+</td><td >adenyl nucleotide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042803#term=children"> GO:0042803 </a>
+</td><td >2</td><td >8004</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >protein homodimerization activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004527#term=children"> GO:0004527 </a>
+</td><td >0</td><td >8004</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >exonuclease activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001071#term=children"> GO:0001071 </a>
+</td><td >12</td><td >8009</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >nucleic acid binding transcription factor activity</td></tr>
+<tr>
+<td >0.139212003988692</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001032#term=children"> GO:0001032 </a>
+</td><td >3</td><td >8010</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >RNA polymerase III type 3 promoter DNA binding</td></tr>
+<tr>
+<td >0.999999736563736</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015293#term=children"> GO:0015293 </a>
+</td><td >5</td><td >8011</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> </td><td >symporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004190#term=children"> GO:0004190 </a>
+</td><td >0</td><td >8011</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84301">DDI2
+</a> </td><td >aspartic-type endopeptidase activity</td></tr>
+<tr>
+<td >0.895129574183226</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048365#term=children"> GO:0048365 </a>
+</td><td >4</td><td >8012</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >Rac GTPase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016248#term=children"> GO:0016248 </a>
+</td><td >0</td><td >8012</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> </td><td >channel inhibitor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008408#term=children"> GO:0008408 </a>
+</td><td >0</td><td >8012</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >3'-5' exonuclease activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016879#term=children"> GO:0016879 </a>
+</td><td >6</td><td >8015</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >ligase activity, forming carbon-nitrogen bonds</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901265#term=children"> GO:1901265 </a>
+</td><td >73</td><td >8034</td><td ><p title=" "> 22 in total </p>
+</td><td >nucleoside phosphate binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019205#term=children"> GO:0019205 </a>
+</td><td >0</td><td >8034</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> </td><td >nucleobase-containing compound kinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016874#term=children"> GO:0016874 </a>
+</td><td >6</td><td >8037</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >ligase activity</td></tr>
+<tr>
+<td >0.999997625750921</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001664#term=children"> GO:0001664 </a>
+</td><td >6</td><td >8039</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> </td><td >G-protein coupled receptor binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016772#term=children"> GO:0016772 </a>
+</td><td >22</td><td >8045</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >transferase activity, transferring phosphorus-containing groups</td></tr>
+<tr>
+<td >0.999999444221044</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005319#term=children"> GO:0005319 </a>
+</td><td >2</td><td >8046</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >lipid transporter activity</td></tr>
+<tr>
+<td >0.99999994978081</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032182#term=children"> GO:0032182 </a>
+</td><td >1</td><td >8047</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >small conjugating protein binding</td></tr>
+<tr>
+<td >0.973445077928637</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004697#term=children"> GO:0004697 </a>
+</td><td >1</td><td >8048</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >protein kinase C activity</td></tr>
+<tr>
+<td >0.998286066804552</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043021#term=children"> GO:0043021 </a>
+</td><td >3</td><td >8049</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >ribonucleoprotein complex binding</td></tr>
+<tr>
+<td >0.829333503698524</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005109#term=children"> GO:0005109 </a>
+</td><td >4</td><td >8050</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >frizzled binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901363#term=children"> GO:1901363 </a>
+</td><td >93</td><td >8079</td><td ><p title=" "> 33 in total </p>
+</td><td >heterocyclic compound binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016301#term=children"> GO:0016301 </a>
+</td><td >22</td><td >8085</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >kinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019001#term=children"> GO:0019001 </a>
+</td><td >1</td><td >8086</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >guanyl nucleotide binding</td></tr>
+<tr>
+<td >0.0604817495629306</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0052650#term=children"> GO:0052650 </a>
+</td><td >2</td><td >8087</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >NADP-retinol dehydrogenase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001618#term=children"> GO:0001618 </a>
+</td><td >0</td><td >8087</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> </td><td >virus receptor activity</td></tr>
+<tr>
+<td >0.942043473807415</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051861#term=children"> GO:0051861 </a>
+</td><td >2</td><td >8088</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >glycolipid binding</td></tr>
+<tr>
+<td >0.999941247908244</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015297#term=children"> GO:0015297 </a>
+</td><td >3</td><td >8089</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >antiporter activity</td></tr>
+<tr>
+<td >0.999999999741753</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015291#term=children"> GO:0015291 </a>
+</td><td >8</td><td >8091</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >secondary active transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016741#term=children"> GO:0016741 </a>
+</td><td >2</td><td >8092</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >transferase activity, transferring one-carbon groups</td></tr>
+<tr>
+<td >0.999999868060525</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0047485#term=children"> GO:0047485 </a>
+</td><td >2</td><td >8093</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >protein N-terminus binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008047#term=children"> GO:0008047 </a>
+</td><td >3</td><td >8095</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> </td><td >enzyme activator activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046872#term=children"> GO:0046872 </a>
+</td><td >60</td><td >8117</td><td ><p title=" "> 23 in total </p>
+</td><td >metal ion binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042802#term=children"> GO:0042802 </a>
+</td><td >11</td><td >8121</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td >identical protein binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005488#term=children"> GO:0005488 </a>
+</td><td >253</td><td >8194</td><td ><p title=" "> 86 in total </p>
+</td><td >binding</td></tr>
+<tr>
+<td >0.999999999577947</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005267#term=children"> GO:0005267 </a>
+</td><td >1</td><td >8195</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >potassium channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016684#term=children"> GO:0016684 </a>
+</td><td >0</td><td >8195</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >oxidoreductase activity, acting on peroxide as acceptor</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005215#term=children"> GO:0005215 </a>
+</td><td >35</td><td >8203</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >transporter activity</td></tr>
+<tr>
+<td >0.0438052645387492</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033691#term=children"> GO:0033691 </a>
+</td><td >5</td><td >8204</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >sialic acid binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015077#term=children"> GO:0015077 </a>
+</td><td >2</td><td >8206</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >monovalent inorganic cation transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003729#term=children"> GO:0003729 </a>
+</td><td >0</td><td >8206</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >mRNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016887#term=children"> GO:0016887 </a>
+</td><td >6</td><td >8208</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >ATPase activity</td></tr>
+<tr>
+<td >0.999283867959388</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003684#term=children"> GO:0003684 </a>
+</td><td >2</td><td >8209</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >damaged DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004672#term=children"> GO:0004672 </a>
+</td><td >12</td><td >8213</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >protein kinase activity</td></tr>
+<tr>
+<td >0.999886024627154</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016614#term=children"> GO:0016614 </a>
+</td><td >5</td><td >8216</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >oxidoreductase activity, acting on CH-OH group of donors</td></tr>
+<tr>
+<td >0.959978315796093</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001191#term=children"> GO:0001191 </a>
+</td><td >3</td><td >8217</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >RNA polymerase II transcription factor binding transcription factor activity involved in negative regulation of transcription</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000975#term=children"> GO:0000975 </a>
+</td><td >5</td><td >8219</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >regulatory region DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008168#term=children"> GO:0008168 </a>
+</td><td >2</td><td >8220</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >methyltransferase activity</td></tr>
+<tr>
+<td >0.999995275354014</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016247#term=children"> GO:0016247 </a>
+</td><td >2</td><td >8222</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >channel regulator activity</td></tr>
+<tr>
+<td >0.197948980559376</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070815#term=children"> GO:0070815 </a>
+</td><td >2</td><td >8223</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >peptidyl-lysine 5-dioxygenase activity</td></tr>
+<tr>
+<td >0.999999999926355</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031625#term=children"> GO:0031625 </a>
+</td><td >3</td><td >8225</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >ubiquitin protein ligase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051731#term=children"> GO:0051731 </a>
+</td><td >0</td><td >8225</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> </td><td >polynucleotide 5'-hydroxyl-kinase activity</td></tr>
+<tr>
+<td >0.121468712755528</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001025#term=children"> GO:0001025 </a>
+</td><td >3</td><td >8226</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >RNA polymerase III transcription factor binding</td></tr>
+<tr>
+<td >0.242036856514034</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015103#term=children"> GO:0015103 </a>
+</td><td >26</td><td >8230</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >inorganic anion transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042623#term=children"> GO:0042623 </a>
+</td><td >4</td><td >8231</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> </td><td >ATPase activity, coupled</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004601#term=children"> GO:0004601 </a>
+</td><td >0</td><td >8231</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >peroxidase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004930#term=children"> GO:0004930 </a>
+</td><td >9</td><td >8235</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80045">GPR157
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/387509">GPR153
+</a> </td><td >G-protein coupled receptor activity</td></tr>
+<tr>
+<td >0.999997285816921</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031406#term=children"> GO:0031406 </a>
+</td><td >9</td><td >8238</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >carboxylic acid binding</td></tr>
+<tr>
+<td >0.999999999992624</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016705#term=children"> GO:0016705 </a>
+</td><td >2</td><td >8239</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >oxidoreductase activity, acting on paired donors, with incorporation or reduction of molecular oxygen</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008017#term=children"> GO:0008017 </a>
+</td><td >4</td><td >8241</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >microtubule binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016740#term=children"> GO:0016740 </a>
+</td><td >26</td><td >8249</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >transferase activity</td></tr>
+<tr>
+<td >0.992475423217194</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0071889#term=children"> GO:0071889 </a>
+</td><td >1</td><td >8250</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >14-3-3 protein binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046914#term=children"> GO:0046914 </a>
+</td><td >19</td><td >8259</td><td ><p title=" "> 10 in total </p>
+</td><td >transition metal ion binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016790#term=children"> GO:0016790 </a>
+</td><td >0</td><td >8259</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >thiolester hydrolase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048037#term=children"> GO:0048037 </a>
+</td><td >3</td><td >8261</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >cofactor binding</td></tr>
+<tr>
+<td >0.999999999990554</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015079#term=children"> GO:0015079 </a>
+</td><td >1</td><td >8262</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >potassium ion transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019904#term=children"> GO:0019904 </a>
+</td><td >12</td><td >8267</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/148398">SAMD11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >protein domain specific binding</td></tr>
+<tr>
+<td >0.999999999979944</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050662#term=children"> GO:0050662 </a>
+</td><td >3</td><td >8269</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >coenzyme binding</td></tr>
+<tr>
+<td >0.951094438750488</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048487#term=children"> GO:0048487 </a>
+</td><td >2</td><td >8270</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >beta-tubulin binding</td></tr>
+<tr>
+<td >0.139212003988692</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001031#term=children"> GO:0001031 </a>
+</td><td >3</td><td >8271</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >RNA polymerase III type 2 promoter DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016788#term=children"> GO:0016788 </a>
+</td><td >3</td><td >8273</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >hydrolase activity, acting on ester bonds</td></tr>
+<tr>
+<td >0.967331967603655</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008158#term=children"> GO:0008158 </a>
+</td><td >1</td><td >8274</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >hedgehog receptor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035639#term=children"> GO:0035639 </a>
+</td><td >36</td><td >8286</td><td ><p title=" "> 14 in total </p>
+</td><td >purine ribonucleoside triphosphate binding</td></tr>
+<tr>
+<td >0.999390280462633</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016616#term=children"> GO:0016616 </a>
+</td><td >5</td><td >8289</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >oxidoreductase activity, acting on the CH-OH group of donors, NAD or NADP as acceptor</td></tr>
+<tr>
+<td >0.999471680231071</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005244#term=children"> GO:0005244 </a>
+</td><td >25</td><td >8293</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >voltage-gated ion channel activity</td></tr>
+<tr>
+<td >0.975486471761834</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019894#term=children"> GO:0019894 </a>
+</td><td >2</td><td >8294</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23207">PLEKHM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >kinesin binding</td></tr>
+<tr>
+<td >0.999999634971867</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005200#term=children"> GO:0005200 </a>
+</td><td >5</td><td >8295</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >structural constituent of cytoskeleton</td></tr>
+<tr>
+<td >0.947168968783428</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005003#term=children"> GO:0005003 </a>
+</td><td >2</td><td >8296</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >ephrin receptor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017111#term=children"> GO:0017111 </a>
+</td><td >9</td><td >8300</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >nucleoside-triphosphatase activity</td></tr>
+<tr>
+<td >0.139708717269553</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031386#term=children"> GO:0031386 </a>
+</td><td >1</td><td >8301</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >protein tag</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046983#term=children"> GO:0046983 </a>
+</td><td >9</td><td >8306</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390992">HES3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57801">HES4
+</a> </td><td >protein dimerization activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000062#term=children"> GO:0000062 </a>
+</td><td >0</td><td >8306</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >fatty-acyl-CoA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0047617#term=children"> GO:0047617 </a>
+</td><td >0</td><td >8306</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >acyl-CoA hydrolase activity</td></tr>
+<tr>
+<td >0.385411899338164</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004693#term=children"> GO:0004693 </a>
+</td><td >6</td><td >8307</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >cyclin-dependent protein serine/threonine kinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004842#term=children"> GO:0004842 </a>
+</td><td >6</td><td >8310</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >ubiquitin-protein ligase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005096#term=children"> GO:0005096 </a>
+</td><td >1</td><td >8311</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> </td><td >GTPase activator activity</td></tr>
+<tr>
+<td >0.988968765787817</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051219#term=children"> GO:0051219 </a>
+</td><td >3</td><td >8312</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >phosphoprotein binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0060089#term=children"> GO:0060089 </a>
+</td><td >31</td><td >8325</td><td ><p title=" "> 14 in total </p>
+</td><td >molecular transducer activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001883#term=children"> GO:0001883 </a>
+</td><td >36</td><td >8337</td><td ><p title=" "> 14 in total </p>
+</td><td >purine nucleoside binding</td></tr>
+<tr>
+<td >0.999999999999845</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051015#term=children"> GO:0051015 </a>
+</td><td >3</td><td >8338</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >actin filament binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030695#term=children"> GO:0030695 </a>
+</td><td >5</td><td >8341</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >GTPase regulator activity</td></tr>
+<tr>
+<td >0.999999894488733</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016279#term=children"> GO:0016279 </a>
+</td><td >2</td><td >8342</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >protein-lysine N-methyltransferase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003824#term=children"> GO:0003824 </a>
+</td><td >66</td><td >8370</td><td ><p title=" "> 37 in total </p>
+</td><td >catalytic activity</td></tr>
+<tr>
+<td >0.999999999698583</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005506#term=children"> GO:0005506 </a>
+</td><td >2</td><td >8371</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >iron ion binding</td></tr>
+<tr>
+<td >0.999999984424769</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004714#term=children"> GO:0004714 </a>
+</td><td >2</td><td >8372</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >transmembrane receptor protein tyrosine kinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046873#term=children"> GO:0046873 </a>
+</td><td >2</td><td >8374</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >metal ion transmembrane transporter activity</td></tr>
+<tr>
+<td >0.0134310068591483</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008267#term=children"> GO:0008267 </a>
+</td><td >3</td><td >8375</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >poly-glutamine tract binding</td></tr>
+<tr>
+<td >0.202589376249469</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008527#term=children"> GO:0008527 </a>
+</td><td >4</td><td >8377</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> </td><td >taste receptor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030234#term=children"> GO:0030234 </a>
+</td><td >7</td><td >8381</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >enzyme regulator activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044212#term=children"> GO:0044212 </a>
+</td><td >5</td><td >8383</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >transcription regulatory region DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016817#term=children"> GO:0016817 </a>
+</td><td >9</td><td >8387</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >hydrolase activity, acting on acid anhydrides</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016290#term=children"> GO:0016290 </a>
+</td><td >0</td><td >8387</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >palmitoyl-CoA hydrolase activity</td></tr>
+<tr>
+<td >0.911917729767277</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016917#term=children"> GO:0016917 </a>
+</td><td >2</td><td >8388</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> </td><td >GABA receptor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0036094#term=children"> GO:0036094 </a>
+</td><td >75</td><td >8408</td><td ><p title=" "> 23 in total </p>
+</td><td >small molecule binding</td></tr>
+<tr>
+<td >0.999999999999987</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051020#term=children"> GO:0051020 </a>
+</td><td >7</td><td >8410</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >GTPase binding</td></tr>
+<tr>
+<td >0.385411899338164</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097472#term=children"> GO:0097472 </a>
+</td><td >6</td><td >8411</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >cyclin-dependent protein kinase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004674#term=children"> GO:0004674 </a>
+</td><td >10</td><td >8414</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >protein serine/threonine kinase activity</td></tr>
+<tr>
+<td >0.764634132165701</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016646#term=children"> GO:0016646 </a>
+</td><td >2</td><td >8415</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >oxidoreductase activity, acting on the CH-NH group of donors, NAD or NADP as acceptor</td></tr>
+<tr>
+<td >0.34049950674594</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004345#term=children"> GO:0004345 </a>
+</td><td >1</td><td >8416</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >glucose-6-phosphate dehydrogenase activity</td></tr>
+<tr>
+<td >0.990834904257868</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050661#term=children"> GO:0050661 </a>
+</td><td >3</td><td >8418</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >NADP binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032555#term=children"> GO:0032555 </a>
+</td><td >36</td><td >8430</td><td ><p title=" "> 14 in total </p>
+</td><td >purine ribonucleotide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003774#term=children"> GO:0003774 </a>
+</td><td >2</td><td >8431</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >motor activity</td></tr>
+<tr>
+<td >0.218880786542925</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0047936#term=children"> GO:0047936 </a>
+</td><td >1</td><td >8432</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >glucose 1-dehydrogenase [NAD(P)] activity</td></tr>
+<tr>
+<td >0.0846752235625693</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017089#term=children"> GO:0017089 </a>
+</td><td >2</td><td >8433</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >glycolipid transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022857#term=children"> GO:0022857 </a>
+</td><td >33</td><td >8440</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >transmembrane transporter activity</td></tr>
+<tr>
+<td >0.0101263955423458</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031208#term=children"> GO:0031208 </a>
+</td><td >3</td><td >8441</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >POZ domain binding</td></tr>
+<tr>
+<td >0.999398171770617</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005548#term=children"> GO:0005548 </a>
+</td><td >2</td><td >8442</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >phospholipid transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005102#term=children"> GO:0005102 </a>
+</td><td >92</td><td >8457</td><td ><p title=" "> 16 in total </p>
+</td><td >receptor binding</td></tr>
+<tr>
+<td >0.999999995264763</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008276#term=children"> GO:0008276 </a>
+</td><td >2</td><td >8458</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >protein methyltransferase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004386#term=children"> GO:0004386 </a>
+</td><td >4</td><td >8459</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> </td><td >helicase activity</td></tr>
+<tr>
+<td >0.999999999999825</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097367#term=children"> GO:0097367 </a>
+</td><td >5</td><td >8460</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >carbohydrate derivative binding</td></tr>
+<tr>
+<td >0.937298170498397</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070491#term=children"> GO:0070491 </a>
+</td><td >5</td><td >8461</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> </td><td >repressing transcription factor binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032550#term=children"> GO:0032550 </a>
+</td><td >36</td><td >8473</td><td ><p title=" "> 14 in total </p>
+</td><td >purine ribonucleoside binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016491#term=children"> GO:0016491 </a>
+</td><td >9</td><td >8478</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >oxidoreductase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004175#term=children"> GO:0004175 </a>
+</td><td >11</td><td >8483</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84301">DDI2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >endopeptidase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022843#term=children"> GO:0022843 </a>
+</td><td >1</td><td >8484</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >voltage-gated cation channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016787#term=children"> GO:0016787 </a>
+</td><td >28</td><td >8498</td><td ><p title=" "> 19 in total </p>
+</td><td >hydrolase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003777#term=children"> GO:0003777 </a>
+</td><td >2</td><td >8499</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >microtubule motor activity</td></tr>
+<tr>
+<td >0.981892087815591</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015459#term=children"> GO:0015459 </a>
+</td><td >2</td><td >8501</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >potassium channel regulator activity</td></tr>
+<tr>
+<td >2.69814171005578e-11</td><td >1.06711504632706e-07</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035257#term=children"> GO:0035257 </a>
+</td><td >79</td><td >8511</td><td ><p title=" "> 11 in total </p>
+</td><td >nuclear hormone receptor binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019901#term=children"> GO:0019901 </a>
+</td><td >9</td><td >8515</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >protein kinase binding</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042974#term=children"> GO:0042974 </a>
+</td><td >79</td><td >8525</td><td ><p title=" "> 11 in total </p>
+</td><td >retinoic acid receptor binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016818#term=children"> GO:0016818 </a>
+</td><td >9</td><td >8529</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >hydrolase activity, acting on acid anhydrides, in phosphorus-containing anhydrides</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046982#term=children"> GO:0046982 </a>
+</td><td >4</td><td >8531</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> </td><td >protein heterodimerization activity</td></tr>
+<tr>
+<td >0.999999990925483</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042393#term=children"> GO:0042393 </a>
+</td><td >5</td><td >8532</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> </td><td >histone binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005198#term=children"> GO:0005198 </a>
+</td><td >10</td><td >8535</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >structural molecule activity</td></tr>
+<tr>
+<td >0.999976475981039</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046332#term=children"> GO:0046332 </a>
+</td><td >2</td><td >8536</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> </td><td >SMAD binding</td></tr>
+<tr>
+<td >0.00479719111319388</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035374#term=children"> GO:0035374 </a>
+</td><td >5</td><td >8537</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >chondroitin sulfate binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003682#term=children"> GO:0003682 </a>
+</td><td >10</td><td >8540</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >chromatin binding</td></tr>
+<tr>
+<td >0.999999999945954</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901681#term=children"> GO:1901681 </a>
+</td><td >5</td><td >8541</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >sulfur compound binding</td></tr>
+<tr>
+<td >0.139212003988692</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0080084#term=children"> GO:0080084 </a>
+</td><td >3</td><td >8542</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >5S rDNA binding</td></tr>
+<tr>
+<td >0.999999988442595</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009055#term=children"> GO:0009055 </a>
+</td><td >2</td><td >8543</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >electron carrier activity</td></tr>
+<tr>
+<td >0.896978357429405</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901505#term=children"> GO:1901505 </a>
+</td><td >2</td><td >8544</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >carbohydrate derivative transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000166#term=children"> GO:0000166 </a>
+</td><td >73</td><td >8563</td><td ><p title=" "> 22 in total </p>
+</td><td >nucleotide binding</td></tr>
+<tr>
+<td >0.99091453171183</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0072341#term=children"> GO:0072341 </a>
+</td><td >2</td><td >8564</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >modified amino acid binding</td></tr>
+<tr>
+<td >0.363154592519626</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008106#term=children"> GO:0008106 </a>
+</td><td >2</td><td >8565</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >alcohol dehydrogenase (NADP+) activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004532#term=children"> GO:0004532 </a>
+</td><td >0</td><td >8565</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >exoribonuclease activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003677#term=children"> GO:0003677 </a>
+</td><td >30</td><td >8578</td><td ><p title=" "> 13 in total </p>
+</td><td >DNA binding</td></tr>
+<tr>
+<td >0.999999999961487</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017124#term=children"> GO:0017124 </a>
+</td><td >2</td><td >8579</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >SH3 domain binding</td></tr>
+<tr>
+<td >0.0725589744401436</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031491#term=children"> GO:0031491 </a>
+</td><td >5</td><td >8580</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> </td><td >nucleosome binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004888#term=children"> GO:0004888 </a>
+</td><td >18</td><td >8589</td><td ><p title=" "> 10 in total </p>
+</td><td >transmembrane signaling receptor activity</td></tr>
+<tr>
+<td >0.999999999999638</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030246#term=children"> GO:0030246 </a>
+</td><td >5</td><td >8592</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >carbohydrate binding</td></tr>
+<tr>
+<td >0.999999999999433</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004518#term=children"> GO:0004518 </a>
+</td><td >2</td><td >8593</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >nuclease activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005543#term=children"> GO:0005543 </a>
+</td><td >10</td><td >8599</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23207">PLEKHM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84069">PLEKHN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >phospholipid binding</td></tr>
+<tr>
+<td >0.121468712755528</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001156#term=children"> GO:0001156 </a>
+</td><td >3</td><td >8600</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >TFIIIC-class transcription factor binding</td></tr>
+<tr>
+<td >0.999999996006513</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005089#term=children"> GO:0005089 </a>
+</td><td >5</td><td >8603</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Rho guanyl-nucleotide exchange factor activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032549#term=children"> GO:0032549 </a>
+</td><td >36</td><td >8615</td><td ><p title=" "> 14 in total </p>
+</td><td >ribonucleoside binding</td></tr>
+<tr>
+<td >0.999999999926355</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044389#term=children"> GO:0044389 </a>
+</td><td >3</td><td >8617</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >small conjugating protein ligase binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032559#term=children"> GO:0032559 </a>
+</td><td >35</td><td >8628</td><td ><p title=" "> 13 in total </p>
+</td><td >adenyl ribonucleotide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022890#term=children"> GO:0022890 </a>
+</td><td >2</td><td >8630</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >inorganic cation transmembrane transporter activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003723#term=children"> GO:0003723 </a>
+</td><td >11</td><td >8632</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343069">HNRNPCL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >RNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0060589#term=children"> GO:0060589 </a>
+</td><td >5</td><td >8635</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >nucleoside-triphosphatase regulator activity</td></tr>
+<tr>
+<td >0.154675992523726</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001016#term=children"> GO:0001016 </a>
+</td><td >3</td><td >8636</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >RNA polymerase III regulatory region DNA binding</td></tr>
+<tr>
+<td >0.999999999972473</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070035#term=children"> GO:0070035 </a>
+</td><td >4</td><td >8637</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> </td><td >purine NTP-dependent helicase activity</td></tr>
+<tr>
+<td >0.999999994971134</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008170#term=children"> GO:0008170 </a>
+</td><td >2</td><td >8638</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >N-methyltransferase activity</td></tr>
+<tr>
+<td >0.999999999999578</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043566#term=children"> GO:0043566 </a>
+</td><td >5</td><td >8640</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >structure-specific DNA binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070011#term=children"> GO:0070011 </a>
+</td><td >11</td><td >8645</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84301">DDI2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >peptidase activity, acting on L-amino acid peptides</td></tr>
+<tr>
+<td >0.999999999999995</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022838#term=children"> GO:0022838 </a>
+</td><td >28</td><td >8651</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >substrate-specific channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003700#term=children"> GO:0003700 </a>
+</td><td >12</td><td >8656</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >sequence-specific DNA binding transcription factor activity</td></tr>
+<tr>
+<td >0.295679358441546</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043395#term=children"> GO:0043395 </a>
+</td><td >5</td><td >8657</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >heparan sulfate proteoglycan binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003713#term=children"> GO:0003713 </a>
+</td><td >2</td><td >8658</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> </td><td >transcription coactivator activity</td></tr>
+<tr>
+<td >0.977095055016066</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043560#term=children"> GO:0043560 </a>
+</td><td >1</td><td >8659</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >insulin receptor substrate binding</td></tr>
+<tr>
+<td >0.999999999999918</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005088#term=children"> GO:0005088 </a>
+</td><td >5</td><td >8662</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Ras guanyl-nucleotide exchange factor activity</td></tr>
+<tr>
+<td >0.327952303021696</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005184#term=children"> GO:0005184 </a>
+</td><td >2</td><td >8663</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> </td><td >neuropeptide hormone activity</td></tr>
+<tr>
+<td >0.999997805672643</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008236#term=children"> GO:0008236 </a>
+</td><td >7</td><td >8666</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >serine-type peptidase activity</td></tr>
+<tr>
+<td >0.999999999999999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015267#term=children"> GO:0015267 </a>
+</td><td >28</td><td >8672</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >channel activity</td></tr>
+<tr>
+<td >0.999999955026099</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005249#term=children"> GO:0005249 </a>
+</td><td >1</td><td >8673</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >voltage-gated potassium channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097159#term=children"> GO:0097159 </a>
+</td><td >93</td><td >8702</td><td ><p title=" "> 33 in total </p>
+</td><td >organic cyclic compound binding</td></tr>
+<tr>
+<td >0.998879199329666</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008509#term=children"> GO:0008509 </a>
+</td><td >26</td><td >8706</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >anion transmembrane transporter activity</td></tr>
+<tr>
+<td >0.850089602972276</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031418#term=children"> GO:0031418 </a>
+</td><td >2</td><td >8707</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >L-ascorbic acid binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022891#term=children"> GO:0022891 </a>
+</td><td >28</td><td >8713</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >substrate-specific transmembrane transporter activity</td></tr>
+<tr>
+<td >0.6755811957058</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043394#term=children"> GO:0043394 </a>
+</td><td >5</td><td >8714</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >proteoglycan binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016209#term=children"> GO:0016209 </a>
+</td><td >0</td><td >8714</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >antioxidant activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051920#term=children"> GO:0051920 </a>
+</td><td >0</td><td >8714</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> </td><td >peroxiredoxin activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032553#term=children"> GO:0032553 </a>
+</td><td >36</td><td >8726</td><td ><p title=" "> 14 in total </p>
+</td><td >ribonucleotide binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001882#term=children"> GO:0001882 </a>
+</td><td >36</td><td >8738</td><td ><p title=" "> 14 in total </p>
+</td><td >nucleoside binding</td></tr>
+<tr>
+<td >0.248085452466854</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000182#term=children"> GO:0000182 </a>
+</td><td >3</td><td >8739</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >rDNA binding</td></tr>
+<tr>
+<td >3.58635343644664e-11</td><td >1.41840278411465e-07</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051427#term=children"> GO:0051427 </a>
+</td><td >79</td><td >8749</td><td ><p title=" "> 11 in total </p>
+</td><td >hormone receptor binding</td></tr>
+<tr>
+<td >0.139212003988692</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001030#term=children"> GO:0001030 </a>
+</td><td >3</td><td >8750</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >RNA polymerase III type 1 promoter DNA binding</td></tr>
+<tr>
+<td >0.996427076703033</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001948#term=children"> GO:0001948 </a>
+</td><td >7</td><td >8752</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >glycoprotein binding</td></tr>
+<tr>
+<td >0.0963748307861568</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005035#term=children"> GO:0005035 </a>
+</td><td >4</td><td >8754</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/943">TNFRSF8
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >death receptor activity</td></tr>
+<tr>
+<td >0.999997893416699</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043130#term=children"> GO:0043130 </a>
+</td><td >1</td><td >8755</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >ubiquitin binding</td></tr>
+<tr>
+<td >0.999999998967418</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0022836#term=children"> GO:0022836 </a>
+</td><td >28</td><td >8761</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >gated channel activity</td></tr>
+<tr>
+<td >0.887414962913529</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048306#term=children"> GO:0048306 </a>
+</td><td >4</td><td >8762</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >calcium-dependent protein binding</td></tr>
+<tr>
+<td >0.999999999998072</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017016#term=children"> GO:0017016 </a>
+</td><td >7</td><td >8764</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >Ras GTPase binding</td></tr>
+<tr>
+<td >0.999999999726975</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004222#term=children"> GO:0004222 </a>
+</td><td >2</td><td >8765</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >metalloendopeptidase activity</td></tr>
+<tr>
+<td >0.802146856468282</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004890#term=children"> GO:0004890 </a>
+</td><td >2</td><td >8766</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> </td><td >GABA-A receptor activity</td></tr>
+<tr>
+<td >0.999990900211644</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005230#term=children"> GO:0005230 </a>
+</td><td >2</td><td >8767</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> </td><td >extracellular ligand-gated ion channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043621#term=children"> GO:0043621 </a>
+</td><td >0</td><td >8767</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/148398">SAMD11
+</a> </td><td >protein self-association</td></tr>
+<tr>
+<td >0.99996011028921</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019842#term=children"> GO:0019842 </a>
+</td><td >2</td><td >8768</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >vitamin binding</td></tr>
+<tr>
+<td >0.999922609757502</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004252#term=children"> GO:0004252 </a>
+</td><td >7</td><td >8771</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >serine-type endopeptidase activity</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008308#term=children"> GO:0008308 </a>
+</td><td >24</td><td >8774</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >voltage-gated anion channel activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008233#term=children"> GO:0008233 </a>
+</td><td >11</td><td >8779</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84301">DDI2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >peptidase activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015631#term=children"> GO:0015631 </a>
+</td><td >4</td><td >8781</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >tubulin binding</td></tr>
+<tr>
+<td >0.999927437396209</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008144#term=children"> GO:0008144 </a>
+</td><td >3</td><td >8782</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >drug binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005509#term=children"> GO:0005509 </a>
+</td><td >26</td><td >8788</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/374955">SPATA21
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1953">MEGF6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >calcium ion binding</td></tr>
+<tr>
+<td >0.992266988441575</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004536#term=children"> GO:0004536 </a>
+</td><td >2</td><td >8789</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >deoxyribonuclease activity</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0004713#term=children"> GO:0004713 </a>
+</td><td >2</td><td >8790</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >protein tyrosine kinase activity</td></tr>
+<tr>
+<td >0.999999999266677</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019199#term=children"> GO:0019199 </a>
+</td><td >2</td><td >8791</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >transmembrane receptor protein kinase activity</td></tr>
+<tr>
+<td >0.886349338056715</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070530#term=children"> GO:0070530 </a>
+</td><td >1</td><td >8792</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >K63-linked polyubiquitin binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016773#term=children"> GO:0016773 </a>
+</td><td >22</td><td >8798</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >phosphotransferase activity, alcohol group as acceptor</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017076#term=children"> GO:0017076 </a>
+</td><td >57</td><td >8812</td><td ><p title=" "> 16 in total </p>
+</td><td >purine nucleotide binding</td></tr>
+<tr>
+<td >0.99999796368262</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030165#term=children"> GO:0030165 </a>
+</td><td >3</td><td >8813</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >PDZ domain binding</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005261#term=children"> GO:0005261 </a>
+</td><td >2</td><td >8815</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >cation channel activity</td></tr>
+<tr>
+<td >0.999999775745349</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016597#term=children"> GO:0016597 </a>
+</td><td >2</td><td >8816</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >amino acid binding</td></tr>
+<tr>
+<td >0.999776060251901</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016706#term=children"> GO:0016706 </a>
+</td><td >2</td><td >8817</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >oxidoreductase activity, acting on paired donors, with incorporation or reduction of molecular oxygen, 2-oxoglutarate as one donor, and incorporation of one atom each of oxygen into both donors</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008237#term=children"> GO:0008237 </a>
+</td><td >2</td><td >8818</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >metallopeptidase activity</td></tr>
