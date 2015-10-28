@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html>
+<script>
+function myFunction()
+{
+
+alert("These are the results for the REACTOME analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+ <% include ../../../results_header.ejs %>
+
+
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #B29A12;
+				border: 1px solid #DED18A;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(255, 237, 140, 0.7);
+				border: 1px solid #CCBA52; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #CCBA52; }
+			.sortable a {
+				color: #584D0D; }
+	</style>
+<table class="sortable">
+<caption>Reactome Table</caption>
+<tr>
+<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
+<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
+<th scope="col"><p title="Reactome Number, the id used by reactome">Reactome ID</p></th> 
+<th scope="col"><p title="How many variants are found in this Pathway, regarding cases samples">Variants cases</p></th>
+<th scope="col"><p title="How many variants are found in this Pathway, regarding control samples are Mutated in this Pathway">Variants
+controls</p></th> 
+<th scope="col"><p title="How many genes are Mutated in this Pathway">Number of affected genes</p></th> 
+<th scope="col"><p title="Total number of genes that are in this Pathway">Total Genes</p></th> 
+<th scope="col"><p title="Biological meaning of this ID">REACTOME ID MEANING</p></th> 
+<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
+</tr>
+<tr>
+<td >0.333334351734773</td><td >1</td><td > 798 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >Negative regulators of RIG-I/MDA5 signaling</td></tr>
+<tr>
+<td >0.736615816282953</td><td >1</td><td > 451 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Formation of apoptosome</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 722 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Metabolism of vitamins and cofactors</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 1109 
+</td><td >0</td><td >3</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >SLC-mediated transmembrane transport</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 695 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IV - Morquio syndrome A</td></tr>
+<tr>
+<td >0.522335146294278</td><td >1</td><td > 742 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >Mitotic G2-G2/M phases</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 325 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MMADHC causes methylmalonic aciduria and homocystinuria type cblD</td></tr>
+<tr>
+<td >0.818876484152292</td><td >1</td><td > 1162 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by Insulin receptor</td></tr>
+<tr>
+<td >0.848487674828122</td><td >1</td><td > 861 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PIP3 activates AKT signaling</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1171 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1 in Cancer</td></tr>
+<tr>
+<td >0.522334904442651</td><td >1</td><td > 218 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >Cell Cycle</td></tr>
+<tr>
+<td >0.258945814221087</td><td >1</td><td > 706 
+</td><td >20</td><td >33</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Metabolism</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1172 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1 t(7;9)(NOTCH1:M1580_K2555) Translocation Mutant</td></tr>
+<tr>
+<td >0.818874579734523</td><td >1</td><td > 1438 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >mTOR signalling</td></tr>
+<tr>
+<td >0.333333658210595</td><td >1</td><td > 119 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >Antiviral mechanism by IFN-stimulated genes</td></tr>
+<tr>
+<td >0.333333658210595</td><td >1</td><td > 586 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >ISG15 antiviral mechanism</td></tr>
+<tr>
+<td >0.738804536805422</td><td >1</td><td > 246 
+</td><td >4</td><td >11</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> </td><td >Class C/3 (Metabotropic glutamate/pheromone receptors)</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 690 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS II - Hunter syndrome</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1168 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1 HD Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1180 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Signaling by TGF-beta Receptor Complex</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 430 
+</td><td >0</td><td >3</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >Facilitative Na+-independent glucose transporters</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1266 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >TGFBR1 LBD Mutants in Cancer</td></tr>
+<tr>
+<td >0.834052792268965</td><td >1</td><td > 221 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Cell death signalling via NRAGE, NRIF and NADE</td></tr>
+<tr>
+<td >0.736623292781388</td><td >1</td><td > 1089 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Role of DCC in regulating apoptosis</td></tr>
+<tr>
+<td >0.407418617172316</td><td >1</td><td > 1309 
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >The retinoid cycle in cones (daylight vision)</td></tr>
+<tr>
+<td >0.848488235592914</td><td >1</td><td > 366 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Downstream signal transduction</td></tr>
+<tr>
+<td >0.259260083649467</td><td >1</td><td > 272 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Constitutive Signaling by NOTCH1 HD+PEST Domain Mutants</td></tr>
+<tr>
+<td >0.333333663177646</td><td >1</td><td > 919 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >Potassium Channels</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 534 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Glycosaminoglycan metabolism</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1268 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >TGFBR2 MSI Frameshift Mutants in Cancer</td></tr>
+<tr>
+<td >0.33333400838762</td><td >1</td><td > 633 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >Interferon alpha/beta signaling</td></tr>
+<tr>
+<td >-7.39698080565176e-10</td><td >-1.07626070722233e-06</td><td > 1161 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> </td><td >Signaling by Hippo</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 138 
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Association of TriC/CCT with target proteins during biosynthesis</td></tr>
+<tr>
+<td >0.848487700550081</td><td >1</td><td > 860 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI3K/AKT activation</td></tr>
+<tr>
+<td >0.326067806024471</td><td >1</td><td > 710 
+</td><td >7</td><td >11</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> </td><td >Metabolism of carbohydrates</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 323 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MMAB causes methylmalonic aciduria type cblB</td></tr>
+<tr>
+<td >0.818876130344185</td><td >1</td><td > 856 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI3K Cascade</td></tr>
+<tr>
+<td >0.848488086503035</td><td >1</td><td > 1149 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by ERBB4</td></tr>
+<tr>
+<td >0.258670378328123</td><td >1</td><td > 810 
+</td><td >4</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> </td><td >Nicotinate metabolism</td></tr>
+<tr>
+<td >0.818876351343376</td><td >1</td><td > 574 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >IGF1R signaling cascade</td></tr>
+<tr>
+<td >0.802467100772841</td><td >1</td><td > 717 
+</td><td >1</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Metabolism of polyamines</td></tr>
+<tr>
+<td >0.818876351343376</td><td >1</td><td > 1182 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by Type 1 Insulin-like Growth Factor 1 Receptor (IGF1R)</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 330 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defects in biotin (Btn) metabolism</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 692 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IIIB - Sanfilippo syndrome B</td></tr>
+<tr>
+<td >0.595935216272929</td><td >1</td><td > 549 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >HS-GAG degradation</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 128 
+</td><td >0</td><td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> </td><td >Arachidonic acid metabolism</td></tr>
+<tr>
+<td >0.407408572434053</td><td >1</td><td > 53 
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> </td><td >Activation of Chaperone Genes by XBP1(S)</td></tr>
+<tr>
+<td >0.736616844114365</td><td >1</td><td > 1112 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >SMAC-mediated dissociation of IAP:caspase complexes</td></tr>
+<tr>
+<td >0.818876249672892</td><td >1</td><td > 583 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >IRS-mediated signalling</td></tr>
+<tr>
+<td >0.122110144729381</td><td >1</td><td > 257 
+</td><td >6</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Coenzyme A biosynthesis</td></tr>
+<tr>
+<td >0.407408506575694</td><td >1</td><td > 55 
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> </td><td >Activation of Chaperones by IRE1alpha</td></tr>
+<tr>
+<td >6.14464612525012e-09</td><td >8.94046011223892e-06</td><td > 259 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >Collagen biosynthesis and modifying enzymes</td></tr>
+<tr>
+<td >0.12209835512058</td><td >1</td><td > 1402 
+</td><td >6</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Vitamin B5 (pantothenate) metabolism</td></tr>
+<tr>
+<td >0.848488305367221</td><td >1</td><td > 1146 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by EGFR</td></tr>
+<tr>
+<td >0.863116739978835</td><td >1</td><td > 89 
+</td><td >10</td><td >29</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Adaptive Immune System</td></tr>
+<tr>
+<td >0.818876282835684</td><td >1</td><td > 584 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >IRS-related events</td></tr>
+<tr>
+<td >0.595935220169324</td><td >1</td><td > 347 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Developmental Biology</td></tr>
+<tr>
+<td >0.100154603232195</td><td >1</td><td > 665 
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Lectin pathway of complement activation</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 689 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS I - Hurler syndrome</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1116 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >SMAD4 MH2 Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 320 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective HLCS causes multiple carboxylase deficiency</td></tr>
+<tr>
+<td >0.818873331902062</td><td >1</td><td > 184 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >CD28 dependent PI3K/Akt signaling</td></tr>
+<tr>
+<td >0.912558312733882</td><td >1</td><td > 1189 
+</td><td >9</td><td >29</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Signalling by NGF</td></tr>
+<tr>
+<td >0.834053486866923</td><td >1</td><td > 1177 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Signaling by Rho GTPases</td></tr>
+<tr>
+<td >0.848488385192337</td><td >1</td><td > 776 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >NGF signalling via TRKA from the plasma membrane</td></tr>
+<tr>
+<td >0.848487674828122</td><td >1</td><td > 858 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI3K events in ERBB4 signaling</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 754 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Mucopolysaccharidoses</td></tr>
+<tr>
+<td >0.259259702845846</td><td >1</td><td > 1166 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 326 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MTR causes methylmalonic aciduria and homocystinuria type cblG</td></tr>
+<tr>
+<td >0.522335269558947</td><td >1</td><td > 1003 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >Recruitment of mitotic centrosome proteins and complexes</td></tr>
+<tr>
+<td >0.595935216496698</td><td >1</td><td > 5 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >A tetrasaccharide linker sequence is required for GAG synthesis</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 698 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS VI - Maroteaux-Lamy syndrome</td></tr>
+<tr>
+<td >0.259259375021733</td><td >1</td><td > 552 
+</td><td >2</td><td >2</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >Hemostasis</td></tr>
+<tr>
+<td >0.522335269558947</td><td >1</td><td > 230 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >Centrosome maturation</td></tr>
+<tr>
+<td >0.51725069271781</td><td >1</td><td > 612 
+</td><td >10</td><td >20</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Innate Immune System</td></tr>
+<tr>
+<td >0.411773003869226</td><td >1</td><td > 1350 
+</td><td >25</td><td >47</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >Transmembrane transport of small molecules</td></tr>
+<tr>
+<td >0.834053486866923</td><td >1</td><td > 1086 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >Rho GTPase cycle</td></tr>
+<tr>
+<td >0.834052940807893</td><td >1</td><td > 467 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >G alpha (12/13) signalling events</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 673 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Loss of Function of SMAD2/3 in Cancer</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 315 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective AMN causes hereditary megaloblastic anemia 1</td></tr>
+<tr>
+<td >0.555555727127147</td><td >1</td><td > 222 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >Cell junction organization</td></tr>
+<tr>
+<td >0.595935215962518</td><td >1</td><td > 1078 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Retinoid metabolism and transport</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1265 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >TGFBR1 KD Mutants in Cancer</td></tr>
+<tr>
+<td >0.595935216089292</td><td >1</td><td > 623 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Integrin cell surface interactions</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1114 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >SMAD2/3 Phosphorylation Motif Mutants in Cancer</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 328 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MUT causes methylmalonic aciduria mut type</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 317 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective CD320 causes methylmalonic aciduria</td></tr>
+<tr>
+<td >0.804900882524916</td><td >1</td><td > 711 
+</td><td >2</td><td >7</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >Metabolism of folate and pterines</td></tr>
+<tr>
+<td >0.736620364198883</td><td >1</td><td > 125 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Apoptotic factor-mediated response</td></tr>
+<tr>
+<td >0.84848830699195</td><td >1</td><td > 1188 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by the B Cell Receptor (BCR)</td></tr>
+<tr>
+<td >0.818866205643194</td><td >1</td><td > 1058 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Release of eIF4E</td></tr>
+<tr>
+<td >0.848488217202177</td><td >1</td><td > 1150 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by FGFR</td></tr>
+<tr>
+<td >0.66087654580976</td><td >1</td><td > 247 
+</td><td >5</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Class I MHC mediated antigen processing & presentation</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 319 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective GIF causes intrinsic factor deficiency</td></tr>
+<tr>
+<td >0.848488019846285</td><td >1</td><td > 1179 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by SCF-KIT</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 696 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IV - Morquio syndrome B</td></tr>
+<tr>
+<td >0.848488250124038</td><td >1</td><td > 297 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >DAP12 interactions</td></tr>
+<tr>
+<td >0.736618387344297</td><td >1</td><td > 290 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Cytochrome c-mediated apoptotic response</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 712 
+</td><td >0</td><td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> </td><td >Metabolism of lipids and lipoproteins</td></tr>
+<tr>
+<td >-1.30794619579433e-09</td><td >-1.90306171488075e-06</td><td > 883 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >Peptide ligand-binding receptors</td></tr>
+<tr>
+<td >0.259262260395193</td><td >1</td><td > 271 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Constitutive Signaling by NOTCH1 HD Domain Mutants</td></tr>
+<tr>
+<td >0.736623466370386</td><td >1</td><td > 13 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >AKT phosphorylates targets in the cytosol</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1170 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1 PEST Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.259261073176401</td><td >1</td><td > 38 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Activated NOTCH1 Transmits Signal to the Nucleus</td></tr>
+<tr>
+<td >0.326067536833364</td><td >1</td><td > 408 
+</td><td >7</td><td >11</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >Extracellular matrix organization</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 945 
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Protein folding</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1169 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1 HD+PEST Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.660876509185106</td><td >1</td><td > 118 
+</td><td >5</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Antigen processing: Ubiquitination & Proteasome degradation</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 331 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defects in cobalamin (B12) metabolism</td></tr>
+<tr>
+<td >0.848488258335071</td><td >1</td><td > 437 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Fc epsilon receptor (FCERI) signaling</td></tr>
+<tr>
+<td >0.52233494416941</td><td >1</td><td > 220 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >Cell Cycle, Mitotic</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 675 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Loss of Function of TGFBR1 in Cancer</td></tr>
+<tr>
+<td >0.555556507781438</td><td >1</td><td > 226 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >Cell-extracellular matrix interactions</td></tr>
+<tr>
+<td >0</td><td >0</td><td > 431 
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >Factors involved in megakaryocyte development and platelet production</td></tr>
+<tr>
+<td >0.834053061884848</td><td >1</td><td > 1448 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >p75 NTR receptor-mediated signalling</td></tr>
+<tr>
+<td >0.595935216407985</td><td >1</td><td > 548 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >HS-GAG biosynthesis</td></tr>
+<tr>
+<td >0.848487674828122</td><td >1</td><td > 859 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI3K/AKT Signaling in Cancer</td></tr>
+<tr>
+<td >0.736616844114365</td><td >1</td><td > 1110 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >SMAC binds to IAPs</td></tr>
+<tr>
+<td >0.25926183738637</td><td >1</td><td > 783 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >NOTCH2 Activation and Transmission of Signal to the Nucleus</td></tr>
+<tr>
+<td >0.595935206442468</td><td >1</td><td > 145 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Axon guidance</td></tr>
+<tr>
+<td >0.259260104621204</td><td >1</td><td > 124 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >Apoptotic execution  phase</td></tr>
+<tr>
+<td >0.848487754572452</td><td >1</td><td > 1090 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Role of LAT2/NTAL/LAB on calcium mobilization</td></tr>
+<tr>
+<td >0.848488123063144</td><td >1</td><td > 364 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Downstream Signaling Events Of B Cell Receptor (BCR)</td></tr>
+<tr>
+<td >0.848488161927584</td><td >1</td><td > 367 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Downstream signaling of activated FGFR</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 324 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MMACHC causes methylmalonic aciduria and homocystinuria type cblC</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 723 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Metabolism of water-soluble vitamins and cofactors</td></tr>
+<tr>
+<td >6.14549100497186e-09</td><td >8.94168941223406e-06</td><td > 244 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >Class A/1 (Rhodopsin-like receptors)</td></tr>
+<tr>
+<td >0.447024332394858</td><td >1</td><td > 351 
+</td><td >27</td><td >52</td><td >9</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Disease</td></tr>
+<tr>
+<td >0.848487715807937</td><td >1</td><td > 488 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >GAB1 signalosome</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1267 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >TGFBR2 Kinase Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.259260865117674</td><td >1</td><td > 1173 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH2</td></tr>
+<tr>
+<td >0.333333762518664</td><td >1</td><td > 965 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >RIG-I/MDA5 mediated induction of IFN-alpha/beta pathways</td></tr>
+<tr>
+<td >0.818871080866052</td><td >1</td><td > 1439 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >mTORC1-mediated signalling</td></tr>
+<tr>
+<td >0.527443615706184</td><td >1</td><td > 120 
+</td><td >4</td><td >8</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Apoptosis</td></tr>
+<tr>
+<td >0.848488231436422</td><td >1</td><td > 1148 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by ERBB2</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 1365 
+</td><td >0</td><td >3</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >Transport of glucose and other sugars, bile salts and organic acids, metal ions and amine compounds</td></tr>
+<tr>
+<td >0.333333948783033</td><td >1</td><td > 1407 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >Voltage gated Potassium channels</td></tr>
+<tr>
+<td >0.587757388506949</td><td >1</td><td > 496 
+</td><td >6</td><td >13</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >GPCR downstream signaling</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 694 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IIID - Sanfilippo syndrome D</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 329 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective TCN2 causes hereditary megaloblastic anemia</td></tr>
+<tr>
+<td >0.100156091516307</td><td >1</td><td > 441 
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Ficolins bind to repetitive carbohydrate structures on the target cell surface</td></tr>
+<tr>
+<td >0.595935215281984</td><td >1</td><td > 769 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >NCAM signaling for neurite out-growth</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1181 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Signaling by TGF-beta Receptor Complex in Cancer</td></tr>
+<tr>
+<td >0.333333434693248</td><td >1</td><td > 803 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >Neuronal System</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 1245 
+</td><td >0</td><td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/127281">FAM213B
+</a> </td><td >Synthesis of Prostaglandins (PG) and Thromboxanes (TX)</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 691 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IIIA - Sanfilippo syndrome A</td></tr>
+<tr>
+<td >0.736616844114365</td><td >1</td><td > 1111 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >SMAC-mediated apoptotic response</td></tr>
+<tr>
+<td >0.555555667522521</td><td >1</td><td > 224 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >Cell-Cell communication</td></tr>
+<tr>
+<td >0.520657918793062</td><td >1</td><td > 352 
+</td><td >7</td><td >14</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >Diseases associated with visual transduction</td></tr>
+<tr>
+<td >0.100148600801772</td><td >1</td><td > 279 
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Creation of C4 and C2 activators</td></tr>
+<tr>
+<td >0.555556259429214</td><td >1</td><td > 498 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >GPVI-mediated activation cascade</td></tr>
+<tr>
+<td >0.595935214728309</td><td >1</td><td > 372 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >ECM proteoglycans</td></tr>
+<tr>
+<td >0.704789455242349</td><td >1</td><td > 1160 
+</td><td >10</td><td >24</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >Signaling by GPCR</td></tr>
+<tr>
+<td >0.736624879670146</td><td >1</td><td > 1014 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Regulation of Apoptosis</td></tr>
+<tr>
+<td >0.333333519133144</td><td >1</td><td > 632 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >Interferon Signaling</td></tr>
+<tr>
+<td >0.100139380844551</td><td >1</td><td > 263 
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Complement cascade</td></tr>
+<tr>
+<td >0.100141774010368</td><td >1</td><td > 610 
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Initial triggering of complement</td></tr>
+<tr>
+<td >-3.7885259374093e-09</td><td >-5.51230523893054e-06</td><td > 513 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >Gastrin-CREB signalling pathway via PKC and MAPK</td></tr>
+<tr>
+<td >0.314786243446122</td><td >1</td><td > 645 
+</td><td >25</td><td >44</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >Ion channel transport</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 322 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MMAA causes methylmalonic aciduria type cblA</td></tr>
+<tr>
+<td >6.14530526465984e-09</td><td >8.94141916008007e-06</td><td > 469 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >G alpha (q) signalling events</td></tr>
+<tr>
+<td >0.848488404662604</td><td >1</td><td > 1176 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by PDGF</td></tr>
+<tr>
+<td >0.802469001325207</td><td >1</td><td > 709 
+</td><td >1</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Metabolism of amino acids and derivatives</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 699 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS VII - Sly syndrome</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 332 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defects in vitamin and cofactor metabolism</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 233 
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Chaperonin-mediated protein folding</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 316 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective BTD causes biotidinase deficiency</td></tr>
+<tr>
+<td >0.333333444627354</td><td >1</td><td > 291 
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >Cytokine Signaling in Immune system</td></tr>
+<tr>
+<td >0.595935214730728</td><td >1</td><td > 812 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Non-integrin membrane-ECM interactions</td></tr>
+<tr>
+<td >0.81887631617074</td><td >1</td><td > 585 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >IRS-related events triggered by IGF1R</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 327 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective MTRR causes methylmalonic aciduria and homocystinuria type cblE</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 1113 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >SMAD2/3 MH2 Domain Mutants in Cancer</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 674 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Loss of Function of SMAD4 in Cancer</td></tr>
+<tr>
+<td >0.259260083649467</td><td >1</td><td > 273 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Constitutive Signaling by NOTCH1 PEST Domain Mutants</td></tr>
+<tr>
+<td >0.555556977166762</td><td >1</td><td > 1264 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >TGF-beta receptor signaling in EMT (epithelial to mesenchymal transition)</td></tr>
+<tr>
+<td >0.595935216465649</td><td >1</td><td > 553 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Heparan sulfate/heparin (HS-GAG) metabolism</td></tr>
+<tr>
+<td >0.848487674828122</td><td >1</td><td > 855 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI-3K cascade</td></tr>
+<tr>
+<td >0.848487312369338</td><td >1</td><td > 270 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Constitutive PI3K/AKT Signaling in Cancer</td></tr>
+<tr>
+<td >0.848488314475198</td><td >1</td><td > 1147 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by EGFR in Cancer</td></tr>
+<tr>
+<td >0.520657922596737</td><td >1</td><td > 1399 
+</td><td >7</td><td >14</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >Visual phototransduction</td></tr>
+<tr>
+<td >0.539094709723862</td><td >1</td><td > 719 
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Metabolism of proteins</td></tr>
+<tr>
+<td >0.631352949758309</td><td >1</td><td > 1139 
+</td><td >27</td><td >58</td><td >12</td><td ><p title=" "> 12 in total </p>
+</td><td >Signal Transduction</td></tr>
+<tr>
+<td >0.802455571210999</td><td >1</td><td > 97 
+</td><td >1</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Agmatine biosynthesis</td></tr>
+<tr>
+<td >0.818874731599981</td><td >1</td><td > 866 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PKB-mediated events</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 693 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IIIC - Sanfilippo syndrome C</td></tr>
+<tr>
+<td >0.595935216343418</td><td >1</td><td > 770 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >NCAM1 interactions</td></tr>
+<tr>
+<td >0.407408172500102</td><td >1</td><td > 1385 
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> </td><td >Unfolded Protein Response</td></tr>
+<tr>
+<td >0.453064243858062</td><td >1</td><td > 497 
+</td><td >6</td><td >11</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >GPCR ligand binding</td></tr>
+<tr>
+<td >0.818874376174994</td><td >1</td><td > 183 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >CD28 co-stimulation</td></tr>
+<tr>
+<td >0.314787885607426</td><td >1</td><td > 1211 
+</td><td >25</td><td >44</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >Stimuli-sensing channels</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 411 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >FBXW7 Mutants and NOTCH1 in Cancer</td></tr>
+<tr>
+<td >0.834052643593722</td><td >1</td><td > 785 
+</td><td >4</td><td >13</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >NRAGE signals death through JNK</td></tr>
+<tr>
+<td >0.635024660288949</td><td >1</td><td > 587 
+</td><td >15</td><td >33</td><td >7</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Immune System</td></tr>
+<tr>
+<td >0.259259930224498</td><td >1</td><td > 1167 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >Signaling by NOTCH1</td></tr>
+<tr>
+<td >0.848488223558115</td><td >1</td><td > 298 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >DAP12 signaling</td></tr>
+<tr>
+<td >0.736624603690941</td><td >1</td><td > 779 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >NOD1/2 Signaling Pathway</td></tr>
+<tr>
+<td >0.595935216621037</td><td >1</td><td > 697 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >MPS IX - Natowicz syndrome</td></tr>
+<tr>
+<td >0.848487674828122</td><td >1</td><td > 857 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PI3K events in ERBB2 signaling</td></tr>
+<tr>
+<td >1.17855369907716e-09</td><td >1.71479563215726e-06</td><td > 261 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >Collagen formation</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 321 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective LMBRD1 causes methylmalonic aciduria and homocystinuria type cblF</td></tr>
+<tr>
+<td >0.736624901637209</td><td >1</td><td > 829 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Nucleotide-binding domain, leucine rich repeat containing receptor (NLR) signaling pathways</td></tr>
+<tr>
+<td >0.259268358148868</td><td >1</td><td > 121 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >Apoptosis induced DNA fragmentation</td></tr>
+<tr>
+<td >0.522335153124509</td><td >1</td><td > 487 
+</td><td >6</td><td >12</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >G2/M Transition</td></tr>
+<tr>
+<td >0.595935216326272</td><td >1</td><td > 238 
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >Chondroitin sulfate/dermatan sulfate metabolism</td></tr>
+<tr>
+<td >0.73662419675088</td><td >1</td><td > 643 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Intrinsic Pathway for Apoptosis</td></tr>
+<tr>
+<td >0.555555831435223</td><td >1</td><td > 676 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Loss of Function of TGFBR2 in Cancer</td></tr>
+<tr>
+<td >0.861265678435377</td><td >1</td><td > 277 
+</td><td >3</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Costimulation by the CD28 family</td></tr>
+<tr>
+<td >5.6032067874412e-11</td><td >8.15266587572694e-08</td><td > 879 
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> </td><td >Pentose phosphate pathway (hexose monophosphate shunt)</td></tr>
+<tr>
+<td >0.818870777171993</td><td >1</td><td > 1095 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >S6K1-mediated signalling</td></tr>
+<tr>
+<td >0.259268358148868</td><td >1</td><td > 56 
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >Activation of DNA fragmentation factor</td></tr>
+<tr>
+<td >0.848488334633344</td><td >1</td><td > 1151 
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Signaling by FGFR in disease</td></tr>
+<tr>
+<td >0.736618387344297</td><td >1</td><td > 75 
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Activation of caspases through apoptosome-mediated cleavage</td></tr>
+<tr>
+<td >0.81887633866687</td><td >1</td><td > 618 
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Insulin receptor signalling cascade</td></tr>
+<tr>
+<td >0.555555631097468</td><td >1</td><td > 900 
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Platelet activation, signaling and aggregation</td></tr>
+<tr>
+<td >0.232090360086229</td><td >1</td><td > 318 
+</td><td >12</td><td >18</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Defective CUBN causes hereditary megaloblastic anemia 1</td></tr>
+<tr>
+<td >1</td><td >1</td><td > 248 
+</td><td >0</td><td >3</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/155184">SLC2A7
+</a> </td><td >Class II GLUTs</td></tr>

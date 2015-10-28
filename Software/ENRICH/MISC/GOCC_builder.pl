@@ -29,7 +29,7 @@ sub add_child_recursively
 {
  my $term= $_[0];
  if($children{$term}){
- print "{\"name\" : $meaning{$term} , \"title\" : \" $term P.VAL = ##PVAL\",\"color\" : \"##COLOR\",\"children\" : \n\t[";
+ print "{\"name\" : \"$meaning{$term}\" , \"title\" : \" $term P.VAL = ##PVAL\",\"color\" : \"##COLOR\",\"children\" : \n\t[";
 
   my @children = split(/;/,$children{$term});
 
@@ -38,7 +38,7 @@ sub add_child_recursively
    {add_child_recursively($children[$i]);$i++;}
    print "]";
  }
-  else{print "{\"name\" : $meaning{$term} , \"title\" : \" $term P.VAL =##PVAL\",\"color\" : \"##COLOR\",\n";}
+  else{print "{\"name\" : \"$meaning{$term}\" , \"title\" : \" $term P.VAL =##PVAL\",\"color\" : \"##COLOR\",\n";}
 
    print "\},";
 }

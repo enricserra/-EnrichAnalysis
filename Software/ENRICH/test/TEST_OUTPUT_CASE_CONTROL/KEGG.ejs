@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<script>
+function myFunction()
+{
+
+alert("These are the results for the KEGG analysis, performed over genes that are different from the reference on your vcf file.Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+ <% include ../../../results_header.ejs %>
+
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #B29A12;
+				border: 1px solid #DED18A;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(255, 237, 140, 0.7);
+				border: 1px solid #CCBA52; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #CCBA52; }
+			.sortable a {
+				color: #584D0D; }
+	</style>
+
+<table class="sortable">
+<caption>KEGG Table</caption>
+<tr>
+<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
+<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
+<th scope="col"><p title="KEGG Number, the id used by kegg, click to go to KEGG term explanation">KEGG ID</p></th> 
+<th scope="col"><p title="How many variants are found in this Pathway, regarding cases samples">Variants cases</p></th>
+<th scope="col"><p title="How many variants are found in this Pathway, regarding control samples">Variants controls</p></th> 
+<th scope="col"><p title="How many genes have at least one variant in case samples in this Pathway">Affected Genes
+controls</p></th>
+<th scope="col"><p title="Total number of genes that are in this Pathway">Total Genes</p></th> 
+<th scope="col"><p title="Biological meaning of this ID">KEGG ID MEANING</p></th> 
+<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
+</tr>
+<tr>
+<td >0.555555647654311</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04144"> 04144 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Endocytosis</td></tr>
+<tr>
+<td >0.677575354285144</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04146"> 04146 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >Peroxisome</td></tr>
+<tr>
+<td >0.818876427502869</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04012"> 04012 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >ErbB signaling pathway</td></tr>
+<tr>
+<td >0.241316127000425</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04710"> 04710 </a>
+</td><td >6</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> </td><td >Circadian rhythm - mammal</td></tr>
+<tr>
+<td >0.677575719322245</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04141"> 04141 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >Protein processing in endoplasmic reticulum</td></tr>
+<tr>
+<td >0.736625001606323</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05223"> 05223 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Non-small cell lung cancer</td></tr>
+<tr>
+<td >0.648834024285397</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04360"> 04360 </a>
+</td><td >2</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >Axon guidance</td></tr>
+<tr>
+<td >0.527443755979099</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04916"> 04916 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >Melanogenesis</td></tr>
+<tr>
+<td >0.246176814131509</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa01100"> 01100 </a>
+</td><td >18</td><td >29</td><td >7</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Metabolic pathways</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa01040"> 01040 </a>
+</td><td >0</td><td >4</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >Biosynthesis of unsaturated fatty acids</td></tr>
+<tr>
+<td >0.555555690702099</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04062"> 04062 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Chemokine signaling pathway</td></tr>
+<tr>
+<td >0.622821725746146</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04974"> 04974 </a>
+</td><td >3</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >Protein digestion and absorption</td></tr>
+<tr>
+<td >0.736625314921436</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05145"> 05145 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Toxoplasmosis</td></tr>
+<tr>
+<td >0.259259538382116</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04080"> 04080 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> </td><td >Neuroactive ligand-receptor interaction</td></tr>
+<tr>
+<td >0.818875901484529</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05221"> 05221 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Acute myeloid leukemia</td></tr>
+<tr>
+<td >1.13673992441221e-09</td><td >2.60313442690396e-07</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00480"> 00480 </a>
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> </td><td >Glutathione metabolism</td></tr>
+<tr>
+<td >0.78944016997399</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05200"> 05200 </a>
+</td><td >9</td><td >24</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Pathways in cancer</td></tr>
+<tr>
+<td >0.333333902837827</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04622"> 04622 </a>
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >RIG-I-like receptor signaling pathway</td></tr>
+<tr>
+<td >0.677575271648243</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04115"> 04115 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >p53 signaling pathway</td></tr>
+<tr>
+<td >0.407409068576862</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00830"> 00830 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >Retinol metabolism</td></tr>
+<tr>
+<td >0.677130893992053</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04966"> 04966 </a>
+</td><td >14</td><td >32</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> </td><td >Collecting duct acid secretion</td></tr>
+<tr>
+<td >0.736625065654029</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05213"> 05213 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Endometrial cancer</td></tr>
+<tr>
+<td >0.319620061223311</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00030"> 00030 </a>
+</td><td >3</td><td >4</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >Pentose phosphate pathway</td></tr>
+<tr>
+<td >0.818875851431514</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04150"> 04150 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >mTOR signaling pathway</td></tr>
+<tr>
+<td >0.790757813793972</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05012"> 05012 </a>
+</td><td >4</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td >Parkinson's disease</td></tr>
+<tr>
+<td >0.848487393719616</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05215"> 05215 </a>
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Prostate cancer</td></tr>
+<tr>
+<td >0.736625217678416</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05416"> 05416 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Viral myocarditis</td></tr>
+<tr>
+<td >0.790759100102389</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04910"> 04910 </a>
+</td><td >4</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Insulin signaling pathway</td></tr>
+<tr>
+<td >-1.31179000995019e-09</td><td >-3.00399912278593e-07</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00310"> 00310 </a>
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >Lysine degradation</td></tr>
+<tr>
+<td >0.736625324078841</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05016"> 05016 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Huntington's disease</td></tr>
+<tr>
+<td >0.736625076283217</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05210"> 05210 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Colorectal cancer</td></tr>
+<tr>
+<td >0.539094908404973</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04722"> 04722 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >Neurotrophin signaling pathway</td></tr>
+<tr>
+<td >0.122095768729717</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00770"> 00770 </a>
+</td><td >6</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >Pantothenate and CoA biosynthesis</td></tr>
+<tr>
+<td >0.64883401921339</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04973"> 04973 </a>
+</td><td >2</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> </td><td >Carbohydrate digestion and absorption</td></tr>
+<tr>
+<td >0.527443602140012</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04310"> 04310 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >Wnt signaling pathway</td></tr>
+<tr>
+<td >0.660876065932202</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04920"> 04920 </a>
+</td><td >5</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >Adipocytokine signaling pathway</td></tr>
+<tr>
+<td >0.736625306418133</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05010"> 05010 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Alzheimer's disease</td></tr>
+<tr>
+<td >0.736625105935903</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04370"> 04370 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >VEGF signaling pathway</td></tr>
+<tr>
+<td >0.736625291373815</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05222"> 05222 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Small cell lung cancer</td></tr>
+<tr>
+<td >0.527443939611641</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04330"> 04330 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >Notch signaling pathway</td></tr>
+<tr>
+<td >0.79075826826117</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04930"> 04930 </a>
+</td><td >4</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Type II diabetes mellitus</td></tr>
+<tr>
+<td >0.802468744509791</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00330"> 00330 </a>
+</td><td >1</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >Arginine and proline metabolism</td></tr>
+<tr>
+<td >0.527443893300104</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04210"> 04210 </a>
+</td><td >4</td><td >8</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Apoptosis</td></tr>
+<tr>
+<td >0.25865591268662</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00760"> 00760 </a>
+</td><td >4</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> </td><td >Nicotinate and nicotinamide metabolism</td></tr>
+<tr>
+<td >0.555555680767994</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04530"> 04530 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >Tight junction</td></tr>
+<tr>
+<td >0.100138280065717</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04610"> 04610 </a>
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Complement and coagulation cascades</td></tr>
+<tr>
+<td >0.527444219373981</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05014"> 05014 </a>
+</td><td >4</td><td >8</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >Amyotrophic lateral sclerosis (ALS)</td></tr>
+<tr>
+<td >0.527444005181127</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05217"> 05217 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >Basal cell carcinoma</td></tr>
+<tr>
+<td >0.80490525003629</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa00670"> 00670 </a>
+</td><td >2</td><td >7</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >One carbon pool by folate</td></tr>
+<tr>
+<td >0.407407837686909</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04110"> 04110 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> </td><td >Cell cycle</td></tr>
+<tr>
+<td >0.595935216580354</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04512"> 04512 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >ECM-receptor interaction</td></tr>
+<tr>
+<td >0.738804984073506</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04742"> 04742 </a>
+</td><td >4</td><td >11</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> </td><td >Taste transduction</td></tr>
+<tr>
+<td >0.818876032176416</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05214"> 05214 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >Glioma</td></tr>
+<tr>
+<td >0.622821725455272</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04972"> 04972 </a>
+</td><td >3</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >Pancreatic secretion</td></tr>
+<tr>
+<td >0.736625106699031</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05212"> 05212 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >Pancreatic cancer</td></tr>
+<tr>
+<td >0.606925322533299</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04120"> 04120 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td >Ubiquitin mediated proteolysis</td></tr>
+<tr>
+<td >0.100139059940866</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05150"> 05150 </a>
+</td><td >4</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >Staphylococcus aureus infection</td></tr>
+<tr>
+<td >0.440736176914429</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04060"> 04060 </a>
+</td><td >4</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/943">TNFRSF8
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >Cytokine-cytokine receptor interaction</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa03018"> 03018 </a>
+</td><td >0</td><td >6</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >RNA degradation</td></tr>

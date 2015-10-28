@@ -47,6 +47,11 @@
         $universe{"GOMF"}{"Gene"} = "924111399";
 
 
+        $GOFIRST{"BP"} = "GO:0008150";
+        $GOFIRST{"MF"} = "GO:0003674";
+        $GOFIRST{"CC"} = "GO:0005575";
+         
+
 #CLINVAR TRANSLATIONS 
 
 	%references_hash = (

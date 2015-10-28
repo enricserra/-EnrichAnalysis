@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html>
+
+
+<script>
+function myFunction()
+{
+alert("These are the results for the Gene Ontology Cellular Component analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+ <% include ../../../results_header.ejs %>
+
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #4254B2;
+				border: 1px solid #99A8F3;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(189, 200, 255, 0.7);
+				border: 1px solid #6295BA; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #6295BA; }
+			.sortable a {
+				color: #192C8C; }
+	</style>
+<table class="sortable">
+<caption> GO Celular Component Table </caption>
+
+<tr>
+<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
+<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
+<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th> 
+<th scope="col"><p title="How many variants are found in this Ontology, regarding cases samples">Variants cases</p></th>
+<th scope="col"><p title="How many variants are found in this Ontology, regarding control samples">Variants controls</p></th> 
+<th scope="col"><p title="How many genes are annotated in this ontology, or in a child of this ontology">Number of affected genes</p></th> 
+<th scope="col"><p title="Total number of genes that are in this ontology">Total Genes</p></th> 
+<th scope="col"><p title="Minimum level of the graph the ontology belongs to">GO Level</p></th> 
+<th scope="col"><p title="Biological meaning of this ontology">ONTOLOGY DESCRIPTION</p></th> 
+<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
+</tr>
+<tr>
+<td >0.429360448511672</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032839#term=children"> GO:0032839 </a>
+</td><td >3</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >dendrite cytoplasm</td></tr>
+<tr>
+<td >0.262568876300646</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031982#term=children"> GO:0031982 </a>
+</td><td >7</td><td >10</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >vesicle</td></tr>
+<tr>
+<td >0.259259423588391</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000228#term=children"> GO:0000228 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >nuclear chromosome</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043240#term=children"> GO:0043240 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >Fanconi anaemia nuclear complex</td></tr>
+<tr>
+<td >-1.43029457166932e-08</td><td >-1.95235209032862e-05</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030529#term=children"> GO:0030529 </a>
+</td><td >8</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/343069">HNRNPCL1
+</a> </td><td >ribonucleoprotein complex</td></tr>
+<tr>
+<td >0.173296990502129</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048471#term=children"> GO:0048471 </a>
+</td><td >4</td><td >4</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >perinuclear region of cytoplasm</td></tr>
+<tr>
+<td >-6.55040466313039e-11</td><td >-8.94130236517299e-08</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005932#term=children"> GO:0005932 </a>
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> </td><td >microtubule basal body</td></tr>
+<tr>
+<td >0.431329893664096</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043226#term=children"> GO:0043226 </a>
+</td><td >123</td><td >241</td><td >53</td><td ><p title=" "> 62 in total </p>
+</td><td >organelle</td></tr>
+<tr>
+<td >0.606925321965983</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032587#term=children"> GO:0032587 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >ruffle membrane</td></tr>
+<tr>
+<td >0.606925322331762</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031256#term=children"> GO:0031256 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >leading edge membrane</td></tr>
+<tr>
+<td >0.415202536200319</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031226#term=children"> GO:0031226 </a>
+</td><td >27</td><td >51</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td >intrinsic to plasma membrane</td></tr>
+<tr>
+<td >0.559948534822499</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031975#term=children"> GO:0031975 </a>
+</td><td >13</td><td >27</td><td >9</td><td ><p title=" "> 10 in total </p>
+</td><td >envelope</td></tr>
+<tr>
+<td >0.677575376394379</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044439#term=children"> GO:0044439 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >peroxisomal part</td></tr>
+<tr>
+<td >0.539094758781047</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005667#term=children"> GO:0005667 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >transcription factor complex</td></tr>
+<tr>
+<td >0.522335000459276</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031253#term=children"> GO:0031253 </a>
+</td><td >6</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >cell projection membrane</td></tr>
+<tr>
+<td >0.112237510869438</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005575#term=children"> GO:0005575 </a>
+</td><td >228</td><td >412</td><td >91</td><td ><p title=" "> 109 in total </p>
+</td><td >cellular_component</td></tr>
+<tr>
+<td >0.440735929459262</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005912#term=children"> GO:0005912 </a>
+</td><td >4</td><td >7</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >adherens junction</td></tr>
+<tr>
+<td >0.518192847399268</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044432#term=children"> GO:0044432 </a>
+</td><td >9</td><td >18</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >endoplasmic reticulum part</td></tr>
+<tr>
+<td >0.149462577957654</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005813#term=children"> GO:0005813 </a>
+</td><td >7</td><td >8</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td >centrosome</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031941#term=children"> GO:0031941 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >filamentous actin</td></tr>
+<tr>
+<td >0.209626022492145</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042995#term=children"> GO:0042995 </a>
+</td><td >27</td><td >44</td><td >13</td><td ><p title=" "> 16 in total </p>
+</td><td >cell projection</td></tr>
+<tr>
+<td >0.348647572709431</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043025#term=children"> GO:0043025 </a>
+</td><td >9</td><td >15</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >neuronal cell body</td></tr>
+<tr>
+<td >0.420432763631338</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005623#term=children"> GO:0005623 </a>
+</td><td >186</td><td >365</td><td >75</td><td ><p title=" "> 91 in total </p>
+</td><td >cell</td></tr>
+<tr>
+<td >0.765240134379714</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005764#term=children"> GO:0005764 </a>
+</td><td >8</td><td >21</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >lysosome</td></tr>
+<tr>
+<td >0.259259639930215</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000790#term=children"> GO:0000790 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >nuclear chromatin</td></tr>
+<tr>
+<td >0.555559906571156</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045179#term=children"> GO:0045179 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >apical cortex</td></tr>
+<tr>
+<td >0.531779307594807</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000118#term=children"> GO:0000118 </a>
+</td><td >3</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >histone deacetylase complex</td></tr>
+<tr>
+<td >0.259259403720169</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030659#term=children"> GO:0030659 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoplasmic vesicle membrane</td></tr>
+<tr>
+<td >0.459003825863796</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043227#term=children"> GO:0043227 </a>
+</td><td >113</td><td >223</td><td >49</td><td ><p title=" "> 57 in total </p>
+</td><td >membrane-bounded organelle</td></tr>
+<tr>
+<td >0.14615534776947</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005615#term=children"> GO:0005615 </a>
+</td><td >9</td><td >11</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >extracellular space</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031306#term=children"> GO:0031306 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >intrinsic to mitochondrial outer membrane</td></tr>
+<tr>
+<td >0.527443631339241</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030427#term=children"> GO:0030427 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >site of polarized growth</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005903#term=children"> GO:0005903 </a>
+</td><td >0</td><td >2</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >brush border</td></tr>
+<tr>
+<td >0.739713490915508</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031974#term=children"> GO:0031974 </a>
+</td><td >33</td><td >75</td><td >13</td><td ><p title=" "> 15 in total </p>
+</td><td >membrane-enclosed lumen</td></tr>
+<tr>
+<td >0.175191404952164</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005856#term=children"> GO:0005856 </a>
+</td><td >21</td><td >32</td><td >10</td><td ><p title=" "> 11 in total </p>
+</td><td >cytoskeleton</td></tr>
+<tr>
+<td >0.111111630907159</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070160#term=children"> GO:0070160 </a>
+</td><td >3</td><td >2</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >occluding junction</td></tr>
+<tr>
+<td >0.420433321385247</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044464#term=children"> GO:0044464 </a>
+</td><td >186</td><td >365</td><td >75</td><td ><p title=" "> 91 in total </p>
+</td><td >cell part</td></tr>
+<tr>
+<td >0.527443381376808</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015629#term=children"> GO:0015629 </a>
+</td><td >4</td><td >8</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >actin cytoskeleton</td></tr>
+<tr>
+<td >0.619413609851572</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005634#term=children"> GO:0005634 </a>
+</td><td >71</td><td >148</td><td >29</td><td ><p title=" "> 35 in total </p>
+</td><td >nucleus</td></tr>
+<tr>
+<td >0.262568939957721</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031988#term=children"> GO:0031988 </a>
+</td><td >7</td><td >10</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >membrane-bounded vesicle</td></tr>
+<tr>
+<td >0.347416282548699</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097458#term=children"> GO:0097458 </a>
+</td><td >16</td><td >28</td><td >7</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >neuron part</td></tr>
+<tr>
+<td >0.0879441876952144</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005911#term=children"> GO:0005911 </a>
+</td><td >5</td><td >4</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >cell-cell junction</td></tr>
+<tr>
+<td >0.555555849647741</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032432#term=children"> GO:0032432 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >actin filament bundle</td></tr>
+<tr>
+<td >0.196414558521964</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044463#term=children"> GO:0044463 </a>
+</td><td >20</td><td >31</td><td >9</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >cell projection part</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032426#term=children"> GO:0032426 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >stereocilium bundle tip</td></tr>
+<tr>
+<td >0.349693052782145</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031965#term=children"> GO:0031965 </a>
+</td><td >4</td><td >6</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >nuclear membrane</td></tr>
+<tr>
+<td >0.47755488076363</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005622#term=children"> GO:0005622 </a>
+</td><td >147</td><td >292</td><td >63</td><td ><p title=" "> 77 in total </p>
+</td><td >intracellular</td></tr>
+<tr>
+<td >3.67290309277735e-10</td><td >5.01351272164108e-07</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030867#term=children"> GO:0030867 </a>
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >rough endoplasmic reticulum membrane</td></tr>
+<tr>
+<td >0.168218457246966</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030054#term=children"> GO:0030054 </a>
+</td><td >20</td><td >30</td><td >11</td><td ><p title=" "> 12 in total </p>
+</td><td >cell junction</td></tr>
+<tr>
+<td >0.177723168536942</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045211#term=children"> GO:0045211 </a>
+</td><td >6</td><td >7</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >postsynaptic membrane</td></tr>
+<tr>
+<td >0.555557461038768</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035748#term=children"> GO:0035748 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >myelin sheath abaxonal region</td></tr>
+<tr>
+<td >0.407407756742818</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0072372#term=children"> GO:0072372 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >primary cilium</td></tr>
+<tr>
+<td >0.333765074649215</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043228#term=children"> GO:0043228 </a>
+</td><td >31</td><td >56</td><td >14</td><td ><p title=" "> 17 in total </p>
+</td><td >non-membrane-bounded organelle</td></tr>
+<tr>
+<td >0.736625337814944</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000151#term=children"> GO:0000151 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >ubiquitin ligase complex</td></tr>
+<tr>
+<td >0.238882692272923</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0071944#term=children"> GO:0071944 </a>
+</td><td >66</td><td >118</td><td >25</td><td ><p title=" "> 28 in total </p>
+</td><td >cell periphery</td></tr>
+<tr>
+<td >0.527443643785665</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030426#term=children"> GO:0030426 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >growth cone</td></tr>
+<tr>
+<td >0.259259970512376</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005871#term=children"> GO:0005871 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >kinesin complex</td></tr>
+<tr>
+<td >0.606925321633738</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031258#term=children"> GO:0031258 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >lamellipodium membrane</td></tr>
+<tr>
+<td >0.204947180121211</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044430#term=children"> GO:0044430 </a>
+</td><td >17</td><td >26</td><td >7</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoskeletal part</td></tr>
+<tr>
+<td >0.677575570173891</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005741#term=children"> GO:0005741 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >mitochondrial outer membrane</td></tr>
+<tr>
+<td >0.100137375906196</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005929#term=children"> GO:0005929 </a>
+</td><td >4</td><td >3</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >cilium</td></tr>
+<tr>
+<td >0.262568960352363</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016023#term=children"> GO:0016023 </a>
+</td><td >7</td><td >10</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoplasmic membrane-bounded vesicle</td></tr>
+<tr>
+<td >0.818856423319858</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070438#term=children"> GO:0070438 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >mTOR-FKBP12-rapamycin complex</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000176#term=children"> GO:0000176 </a>
+</td><td >0</td><td >6</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >nuclear exosome (RNase complex)</td></tr>
+<tr>
+<td >0.407407946593358</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044309#term=children"> GO:0044309 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >neuron spine</td></tr>
+<tr>
+<td >0.209877830982201</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044304#term=children"> GO:0044304 </a>
+</td><td >3</td><td >3</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >main axon</td></tr>
+<tr>
+<td >0.848487745294142</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044445#term=children"> GO:0044445 </a>
+</td><td >5</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >cytosolic part</td></tr>
+<tr>
+<td >0.259259461117077</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044454#term=children"> GO:0044454 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >nuclear chromosome part</td></tr>
+<tr>
+<td >0.17772307091183</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0097060#term=children"> GO:0097060 </a>
+</td><td >6</td><td >7</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >synaptic membrane</td></tr>
+<tr>
+<td >0.595935215292754</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044437#term=children"> GO:0044437 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >vacuolar part</td></tr>
+<tr>
+<td >0.342180034560124</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045202#term=children"> GO:0045202 </a>
+</td><td >15</td><td >26</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >synapse</td></tr>
+<tr>
+<td >0.319616205709604</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044440#term=children"> GO:0044440 </a>
+</td><td >3</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >endosomal part</td></tr>
+<tr>
+<td >0.679310690423145</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031966#term=children"> GO:0031966 </a>
+</td><td >8</td><td >19</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >mitochondrial membrane</td></tr>
+<tr>
+<td >0.39923835029724</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042175#term=children"> GO:0042175 </a>
+</td><td >8</td><td >14</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td >nuclear outer membrane-endoplasmic reticulum membrane network</td></tr>
+<tr>
+<td >0.431329649519126</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043229#term=children"> GO:0043229 </a>
+</td><td >123</td><td >241</td><td >53</td><td ><p title=" "> 62 in total </p>
+</td><td >intracellular organelle</td></tr>
+<tr>
+<td >0.339829568279978</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034707#term=children"> GO:0034707 </a>
+</td><td >23</td><td >41</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td >chloride channel complex</td></tr>
+<tr>
+<td >0.405534415879683</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030425#term=children"> GO:0030425 </a>
+</td><td >9</td><td >16</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >dendrite</td></tr>
+<tr>
+<td >0.380609671378621</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043005#term=children"> GO:0043005 </a>
+</td><td >14</td><td >25</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >neuron projection</td></tr>
+<tr>
+<td >0.447961680057906</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019866#term=children"> GO:0019866 </a>
+</td><td >5</td><td >9</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> </td><td >organelle inner membrane</td></tr>
+<tr>
+<td >0.319616339798536</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045121#term=children"> GO:0045121 </a>
+</td><td >3</td><td >4</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >membrane raft</td></tr>
+<tr>
+<td >0.65679206426652</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044428#term=children"> GO:0044428 </a>
+</td><td >28</td><td >61</td><td >14</td><td ><p title=" "> 16 in total </p>
+</td><td >nuclear part</td></tr>
+<tr>
+<td >0.429363103247303</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032059#term=children"> GO:0032059 </a>
+</td><td >3</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td >bleb</td></tr>
+<tr>
+<td >0.595935216618063</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005775#term=children"> GO:0005775 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >vacuolar lumen</td></tr>
+<tr>
+<td >0.527443972465216</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016328#term=children"> GO:0016328 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >lateral plasma membrane</td></tr>
+<tr>
+<td >0.177722872480217</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044456#term=children"> GO:0044456 </a>
+</td><td >6</td><td >7</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >synapse part</td></tr>
+<tr>
+<td >0.571898865302669</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044297#term=children"> GO:0044297 </a>
+</td><td >9</td><td >19</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td >cell body</td></tr>
+<tr>
+<td >0.595935212291593</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031012#term=children"> GO:0031012 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >extracellular matrix</td></tr>
+<tr>
+<td >0.607142971594632</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044431#term=children"> GO:0044431 </a>
+</td><td >12</td><td >26</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >Golgi apparatus part</td></tr>
+<tr>
+<td >0.239875914954511</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005768#term=children"> GO:0005768 </a>
+</td><td >9</td><td >13</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >endosome</td></tr>
+<tr>
+<td >0.555555862893209</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001725#term=children"> GO:0001725 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >stress fiber</td></tr>
+<tr>
+<td >0.677575617483082</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005777#term=children"> GO:0005777 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >peroxisome</td></tr>
+<tr>
+<td >0.173297689388493</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005814#term=children"> GO:0005814 </a>
+</td><td >4</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td >centriole</td></tr>
+<tr>
+<td >0.679310704378915</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005740#term=children"> GO:0005740 </a>
+</td><td >8</td><td >19</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >mitochondrial envelope</td></tr>
+<tr>
+<td >0.329856038891492</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0012505#term=children"> GO:0012505 </a>
+</td><td >13</td><td >22</td><td >9</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >endomembrane system</td></tr>
+<tr>
+<td >0.648834019051833</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005902#term=children"> GO:0005902 </a>
+</td><td >2</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >microvillus</td></tr>
+<tr>
+<td >0.34969301188952</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016324#term=children"> GO:0016324 </a>
+</td><td >4</td><td >6</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >apical plasma membrane</td></tr>
+<tr>
+<td >0.677575100336036</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031903#term=children"> GO:0031903 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >microbody membrane</td></tr>
+<tr>
+<td >0.338535137641567</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044446#term=children"> GO:0044446 </a>
+</td><td >75</td><td >141</td><td >35</td><td ><p title=" "> 39 in total </p>
+</td><td >intracellular organelle part</td></tr>
+<tr>
+<td >0.323089210239632</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044422#term=children"> GO:0044422 </a>
+</td><td >77</td><td >144</td><td >36</td><td ><p title=" "> 40 in total </p>
+</td><td >organelle part</td></tr>
+<tr>
+<td >0.555555727127147</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044448#term=children"> GO:0044448 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >cell cortex part</td></tr>
+<tr>
+<td >0.719871239328724</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043234#term=children"> GO:0043234 </a>
+</td><td >50</td><td >110</td><td >15</td><td ><p title=" "> 19 in total </p>
+</td><td >protein complex</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030139#term=children"> GO:0030139 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >endocytic vesicle</td></tr>
+<tr>
+<td >0.677575376394379</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044438#term=children"> GO:0044438 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >microbody part</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044455#term=children"> GO:0044455 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >mitochondrial membrane part</td></tr>
+<tr>
+<td >0.55994853903454</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031967#term=children"> GO:0031967 </a>
+</td><td >13</td><td >27</td><td >9</td><td ><p title=" "> 10 in total </p>
+</td><td >organelle envelope</td></tr>
+<tr>
+<td >0.522335005983321</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005938#term=children"> GO:0005938 </a>
+</td><td >6</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >cell cortex</td></tr>
+<tr>
+<td >0.679310812574672</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044429#term=children"> GO:0044429 </a>
+</td><td >8</td><td >19</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >mitochondrial part</td></tr>
+<tr>
+<td >0.111111547021466</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043296#term=children"> GO:0043296 </a>
+</td><td >3</td><td >2</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >apical junction complex</td></tr>
+<tr>
+<td >0.6310329426427</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005794#term=children"> GO:0005794 </a>
+</td><td >16</td><td >35</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >Golgi apparatus</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009897#term=children"> GO:0009897 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> </td><td >external side of plasma membrane</td></tr>
+<tr>
+<td >0.677575713972131</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031968#term=children"> GO:0031968 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >organelle outer membrane</td></tr>
+<tr>
+<td >0.660876668594033</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044427#term=children"> GO:0044427 </a>
+</td><td >5</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >chromosomal part</td></tr>
+<tr>
+<td >0.511344684603368</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005654#term=children"> GO:0005654 </a>
+</td><td >23</td><td >46</td><td >9</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >nucleoplasm</td></tr>
+<tr>
+<td >0.622821723228324</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030055#term=children"> GO:0030055 </a>
+</td><td >3</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >cell-substrate junction</td></tr>
+<tr>
+<td >0.125050665548727</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016021#term=children"> GO:0016021 </a>
+</td><td >84</td><td >143</td><td >35</td><td ><p title=" "> 39 in total </p>
+</td><td >integral to membrane</td></tr>
+<tr>
+<td >-8.84028406034076e-11</td><td >-1.20669877423651e-07</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005791#term=children"> GO:0005791 </a>
+</td><td >2</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >rough endoplasmic reticulum</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032420#term=children"> GO:0032420 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >stereocilium</td></tr>
+<tr>
+<td >0.606925321730367</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005743#term=children"> GO:0005743 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> </td><td >mitochondrial inner membrane</td></tr>
+<tr>
+<td >0.537733124487479</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005829#term=children"> GO:0005829 </a>
+</td><td >33</td><td >67</td><td >16</td><td ><p title=" "> 18 in total </p>
+</td><td >cytosol</td></tr>
+<tr>
+<td >0.677575100336036</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005778#term=children"> GO:0005778 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >peroxisomal membrane</td></tr>
+<tr>
+<td >0.33981855611696</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034702#term=children"> GO:0034702 </a>
+</td><td >23</td><td >41</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td >ion channel complex</td></tr>
+<tr>
+<td >0.399238331979626</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005789#term=children"> GO:0005789 </a>
+</td><td >8</td><td >14</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td >endoplasmic reticulum membrane</td></tr>
+<tr>
+<td >0.333336511154587</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044224#term=children"> GO:0044224 </a>
+</td><td >1</td><td >1</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >juxtaparanode region of axon</td></tr>
+<tr>
+<td >0.429355829970718</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0014069#term=children"> GO:0014069 </a>
+</td><td >3</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >postsynaptic density</td></tr>
+<tr>
+<td >0.539094973650574</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031461#term=children"> GO:0031461 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >cullin-RING ubiquitin ligase complex</td></tr>
+<tr>
+<td >0.80803763986742</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005739#term=children"> GO:0005739 </a>
+</td><td >17</td><td >43</td><td >9</td><td ><p title=" "> 12 in total </p>
+</td><td >mitochondrion</td></tr>
+<tr>
+<td >0.739713468615872</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070013#term=children"> GO:0070013 </a>
+</td><td >33</td><td >75</td><td >13</td><td ><p title=" "> 15 in total </p>
+</td><td >intracellular organelle lumen</td></tr>
+<tr>
+<td >0.81886856807004</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031931#term=children"> GO:0031931 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >TORC1 complex</td></tr>
+<tr>
+<td >0.378618731132184</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032991#term=children"> GO:0032991 </a>
+</td><td >58</td><td >110</td><td >16</td><td ><p title=" "> 20 in total </p>
+</td><td >macromolecular complex</td></tr>
+<tr>
+<td >0.415202608131238</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005887#term=children"> GO:0005887 </a>
+</td><td >27</td><td >51</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td >integral to plasma membrane</td></tr>
+<tr>
+<td >0.326067653218391</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030424#term=children"> GO:0030424 </a>
+</td><td >7</td><td >11</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >axon</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016323#term=children"> GO:0016323 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> </td><td >basolateral plasma membrane</td></tr>
+<tr>
+<td >0.595935210713427</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005578#term=children"> GO:0005578 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >proteinaceous extracellular matrix</td></tr>
+<tr>
+<td >0.539094859348041</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031301#term=children"> GO:0031301 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td >integral to organelle membrane</td></tr>
+<tr>
+<td >0.622821725263099</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005924#term=children"> GO:0005924 </a>
+</td><td >3</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >cell-substrate adherens junction</td></tr>
+<tr>
+<td >0.319616210288232</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010008#term=children"> GO:0010008 </a>
+</td><td >3</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >endosome membrane</td></tr>
+<tr>
+<td >0.539096003764095</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019005#term=children"> GO:0019005 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td >SCF ubiquitin ligase complex</td></tr>
+<tr>
+<td >0.539096024796506</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031528#term=children"> GO:0031528 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >microvillus membrane</td></tr>
+<tr>
+<td >0.252060328308937</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044421#term=children"> GO:0044421 </a>
+</td><td >14</td><td >22</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >extracellular region part</td></tr>
+<tr>
+<td >0.539094960895789</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030175#term=children"> GO:0030175 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >filopodium</td></tr>
+<tr>
+<td >0.555555796665867</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042641#term=children"> GO:0042641 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >actomyosin</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032421#term=children"> GO:0032421 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >stereocilium bundle</td></tr>
+<tr>
+<td >0.459003831149599</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043231#term=children"> GO:0043231 </a>
+</td><td >113</td><td >223</td><td >49</td><td ><p title=" "> 57 in total </p>
+</td><td >intracellular membrane-bounded organelle</td></tr>
+<tr>
+<td >0.407407613986624</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031514#term=children"> GO:0031514 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >motile cilium</td></tr>
+<tr>
+<td >0.539098254235621</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005779#term=children"> GO:0005779 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td >integral to peroxisomal membrane</td></tr>
+<tr>
+<td >0.903841739205734</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005730#term=children"> GO:0005730 </a>
+</td><td >5</td><td >18</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >nucleolus</td></tr>
+<tr>
+<td >0.539096073054362</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031527#term=children"> GO:0031527 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >filopodium membrane</td></tr>
+<tr>
+<td >0.555556123663273</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030057#term=children"> GO:0030057 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> </td><td >desmosome</td></tr>
+<tr>
+<td >0.802469055778863</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005788#term=children"> GO:0005788 </a>
+</td><td >1</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >endoplasmic reticulum lumen</td></tr>
+<tr>
+<td >0.555555725471463</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016363#term=children"> GO:0016363 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >nuclear matrix</td></tr>
+<tr>
+<td >0.55555614187578</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043209#term=children"> GO:0043209 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >myelin sheath</td></tr>
+<tr>
+<td >0.259259423588391</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0012506#term=children"> GO:0012506 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >vesicle membrane</td></tr>
+<tr>
+<td >0.660876611554972</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016604#term=children"> GO:0016604 </a>
+</td><td >5</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td >nuclear body</td></tr>
+<tr>
+<td >0.677575924510724</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000139#term=children"> GO:0000139 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >Golgi membrane</td></tr>
+<tr>
+<td >0.818868946340704</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031932#term=children"> GO:0031932 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >TORC2 complex</td></tr>
+<tr>
+<td >0.111111630907159</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005923#term=children"> GO:0005923 </a>
+</td><td >3</td><td >2</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >tight junction</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005637#term=children"> GO:0005637 </a>
+</td><td >1</td><td >0</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> </td><td >nuclear inner membrane</td></tr>
+<tr>
+<td >0.595935214896142</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044420#term=children"> GO:0044420 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >extracellular matrix part</td></tr>
+<tr>
+<td >0.79075944589363</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000785#term=children"> GO:0000785 </a>
+</td><td >4</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >chromatin</td></tr>
+<tr>
+<td >0.262568906711216</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031410#term=children"> GO:0031410 </a>
+</td><td >7</td><td >10</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoplasmic vesicle</td></tr>
+<tr>
+<td >0.527443520528031</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030136#term=children"> GO:0030136 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >clathrin-coated vesicle</td></tr>
+<tr>
+<td >0.765240134379714</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000323#term=children"> GO:0000323 </a>
+</td><td >8</td><td >21</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >lytic vacuole</td></tr>
+<tr>
+<td >0.453064103110604</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031252#term=children"> GO:0031252 </a>
+</td><td >6</td><td >11</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >cell leading edge</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0000178#term=children"> GO:0000178 </a>
+</td><td >0</td><td >6</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >exosome (RNase complex)</td></tr>
+<tr>
+<td >0.599523536697194</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005783#term=children"> GO:0005783 </a>
+</td><td >14</td><td >30</td><td >8</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >endoplasmic reticulum</td></tr>
+<tr>
+<td >0.555556509023199</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001533#term=children"> GO:0001533 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> </td><td >cornified envelope</td></tr>
+<tr>
+<td >0.173297429338839</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044450#term=children"> GO:0044450 </a>
+</td><td >4</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td >microtubule organizing center part</td></tr>
+<tr>
+<td >0.595935216973248</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005604#term=children"> GO:0005604 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >basement membrane</td></tr>
+<tr>
+<td >0.595935216564586</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043202#term=children"> GO:0043202 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >lysosomal lumen</td></tr>
+<tr>
+<td >0.345452857249642</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044444#term=children"> GO:0044444 </a>
+</td><td >82</td><td >155</td><td >38</td><td ><p title=" "> 43 in total </p>
+</td><td >cytoplasmic part</td></tr>
+<tr>
+<td >0.407407909800692</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031513#term=children"> GO:0031513 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >nonmotile primary cilium</td></tr>
+<tr>
+<td >0.248598673121733</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031090#term=children"> GO:0031090 </a>
+</td><td >30</td><td >51</td><td >17</td><td ><p title=" "> 18 in total </p>
+</td><td >organelle membrane</td></tr>
+<tr>
+<td >0.319616481736196</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031300#term=children"> GO:0031300 </a>
+</td><td >3</td><td >4</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >intrinsic to organelle membrane</td></tr>
+<tr>
+<td >0.139702409839813</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044425#term=children"> GO:0044425 </a>
+</td><td >94</td><td >163</td><td >39</td><td ><p title=" "> 43 in total </p>
+</td><td >membrane part</td></tr>
+<tr>
+<td >0.407412065314126</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042622#term=children"> GO:0042622 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >photoreceptor outer segment membrane</td></tr>
+<tr>
+<td >0.677575727601013</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019867#term=children"> GO:0019867 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >outer membrane</td></tr>
+<tr>
+<td >0.459541184513167</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005737#term=children"> GO:0005737 </a>
+</td><td >116</td><td >229</td><td >52</td><td ><p title=" "> 62 in total </p>
+</td><td >cytoplasm</td></tr>
+<tr>
+<td >0.447961571958555</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0070161#term=children"> GO:0070161 </a>
+</td><td >5</td><td >9</td><td >4</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >anchoring junction</td></tr>
+<tr>
+<td >0.333765074649215</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043232#term=children"> GO:0043232 </a>
+</td><td >31</td><td >56</td><td >14</td><td ><p title=" "> 17 in total </p>
+</td><td >intracellular non-membrane-bounded organelle</td></tr>
+<tr>
+<td >0.259259489815527</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005875#term=children"> GO:0005875 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >microtubule associated complex</td></tr>
+<tr>
+<td >0.0242947751289524</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005576#term=children"> GO:0005576 </a>
+</td><td >36</td><td >46</td><td >13</td><td ><p title=" "> 13 in total </p>
+</td><td >extracellular region</td></tr>
+<tr>
+<td >0.40740838148154</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0060170#term=children"> GO:0060170 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >cilium membrane</td></tr>
+<tr>
+<td >0.407408210764361</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001750#term=children"> GO:0001750 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >photoreceptor outer segment</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009986#term=children"> GO:0009986 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> </td><td >cell surface</td></tr>
+<tr>
+<td >0.259279119886394</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043196#term=children"> GO:0043196 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >varicosity</td></tr>
+<tr>
+<td >0.818876489119521</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016605#term=children"> GO:0016605 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >PML body</td></tr>
+<tr>
+<td >0.519308703105449</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005796#term=children"> GO:0005796 </a>
+</td><td >8</td><td >16</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td >Golgi lumen</td></tr>
+<tr>
+<td >0.62282172293737</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005925#term=children"> GO:0005925 </a>
+</td><td >3</td><td >7</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >focal adhesion</td></tr>
+<tr>
+<td >0.209877089990311</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033267#term=children"> GO:0033267 </a>
+</td><td >3</td><td >3</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >axon part</td></tr>
+<tr>
+<td >0.765240243178252</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005773#term=children"> GO:0005773 </a>
+</td><td >8</td><td >21</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >vacuole</td></tr>
+<tr>
+<td >0.818873874578457</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005942#term=children"> GO:0005942 </a>
+</td><td >3</td><td >10</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >phosphatidylinositol 3-kinase complex</td></tr>
+<tr>
+<td >0.149462496745857</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005815#term=children"> GO:0005815 </a>
+</td><td >7</td><td >8</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td >microtubule organizing center</td></tr>
+<tr>
+<td >0.115184583849541</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015630#term=children"> GO:0015630 </a>
+</td><td >14</td><td >18</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >microtubule cytoskeleton</td></tr>
+<tr>
+<td >0.677575617483082</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042579#term=children"> GO:0042579 </a>
+</td><td >4</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >microbody</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035327#term=children"> GO:0035327 </a>
+</td><td >0</td><td >6</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >transcriptionally active chromatin</td></tr>
+<tr>
+<td >0.447961766639823</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030027#term=children"> GO:0030027 </a>
+</td><td >5</td><td >9</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >lamellipodium</td></tr>
+<tr>
+<td >0.34969292157638</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045177#term=children"> GO:0045177 </a>
+</td><td >4</td><td >6</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >apical part of cell</td></tr>
+<tr>
+<td >0.539098254235621</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031231#term=children"> GO:0031231 </a>
+</td><td >2</td><td >4</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td >intrinsic to peroxisomal membrane</td></tr>
+<tr>
+<td >0.259260657885997</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0015030#term=children"> GO:0015030 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td >Cajal body</td></tr>
+<tr>
+<td >0.606925325462419</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0001726#term=children"> GO:0001726 </a>
+</td><td >4</td><td >9</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >ruffle</td></tr>
+<tr>
+<td >0.0869122706855446</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016020#term=children"> GO:0016020 </a>
+</td><td >112</td><td >190</td><td >48</td><td ><p title=" "> 54 in total </p>
+</td><td >membrane</td></tr>
+<tr>
+<td >0.736619968772571</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043293#term=children"> GO:0043293 </a>
+</td><td >2</td><td >6</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >apoptosome</td></tr>
+<tr>
+<td >0.407407637534055</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044441#term=children"> GO:0044441 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >cilium part</td></tr>
+<tr>
+<td >0.66087669293636</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005694#term=children"> GO:0005694 </a>
+</td><td >5</td><td >12</td><td >3</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td >chromosome</td></tr>
+<tr>
+<td >0.259259383852015</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044433#term=children"> GO:0044433 </a>
+</td><td >2</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >cytoplasmic vesicle part</td></tr>
+<tr>
+<td >0.429355748427601</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032838#term=children"> GO:0032838 </a>
+</td><td >3</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >cell projection cytoplasm</td></tr>
+<tr>
+<td >0.599523480813611</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044451#term=children"> GO:0044451 </a>
+</td><td >14</td><td >30</td><td >6</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >nucleoplasm part</td></tr>
+<tr>
+<td >0.527443479334124</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030135#term=children"> GO:0030135 </a>
+</td><td >4</td><td >8</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >coated vesicle</td></tr>
+<tr>
+<td >0.381628434665052</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005874#term=children"> GO:0005874 </a>
+</td><td >6</td><td >10</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >microtubule</td></tr>
+<tr>
+<td >0.237082079143487</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005886#term=children"> GO:0005886 </a>
+</td><td >65</td><td >116</td><td >24</td><td ><p title=" "> 27 in total </p>
+</td><td >plasma membrane</td></tr>
+<tr>
+<td >0.450629598311134</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044424#term=children"> GO:0044424 </a>
+</td><td >147</td><td >290</td><td >63</td><td ><p title=" "> 76 in total </p>
+</td><td >intracellular part</td></tr>
+<tr>
+<td >0.368479606539961</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005635#term=children"> GO:0005635 </a>
+</td><td >5</td><td >8</td><td >5</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >nuclear envelope</td></tr>
+<tr>
+<td >0.739713444087277</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043233#term=children"> GO:0043233 </a>
+</td><td >33</td><td >75</td><td >13</td><td ><p title=" "> 15 in total </p>
+</td><td >organelle lumen</td></tr>
+<tr>
+<td >0.72287876555934</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031981#term=children"> GO:0031981 </a>
+</td><td >24</td><td >55</td><td >10</td><td ><p title=" "> 12 in total </p>
+</td><td >nuclear lumen</td></tr>
+<tr>
+<td >0.125050447049461</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031224#term=children"> GO:0031224 </a>
+</td><td >84</td><td >143</td><td >35</td><td ><p title=" "> 39 in total </p>
+</td><td >intrinsic to membrane</td></tr>
+<tr>
+<td >0.407407954687754</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043197#term=children"> GO:0043197 </a>
+</td><td >2</td><td >3</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >dendritic spine</td></tr>
+<tr>
+<td >0.429355811329264</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005770#term=children"> GO:0005770 </a>
+</td><td >3</td><td >5</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td >late endosome</td></tr>
+<tr>
+<td >0.555555694013467</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034399#term=children"> GO:0034399 </a>
+</td><td >1</td><td >2</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >nuclear periphery</td></tr>
+<tr>
+<td >0.660876161384999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0017053#term=children"> GO:0017053 </a>
+</td><td >5</td><td >12</td><td >2</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >transcriptional repressor complex</td></tr>
+<tr>
+<td >0.595935216477896</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005605#term=children"> GO:0005605 </a>
+</td><td >5</td><td >11</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >basal lamina</td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005884#term=children"> GO:0005884 </a>
+</td><td >0</td><td >1</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td >actin filament</td></tr>
+<tr>
+<td >0.343597617134028</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044459#term=children"> GO:0044459 </a>
+</td><td >35</td><td >64</td><td >9</td><td ><p title=" "> 10 in total </p>
+</td><td >plasma membrane part</td></tr>

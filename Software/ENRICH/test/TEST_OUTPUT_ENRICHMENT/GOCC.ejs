@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html>
+
+
+<script>
+function myFunction()
+{
+alert("These are the results for the Gene Ontology Cellular Component analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+ <% include ../../../results_header.ejs %>
+
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #4254B2;
+				border: 1px solid #99A8F3;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(189, 200, 255, 0.7);
+				border: 1px solid #6295BA; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #6295BA; }
+			.sortable a {
+				color: #192C8C; }
+	</style>
+<table class="sortable">
+<caption> GO Celular Component Table </caption>
+
+<tr>
+<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
+<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
+<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th> 
+<th scope="col"><p title="How many variants are found in this Ontology">Variants</p></th> 
+<th scope="col"><p title="How many genes are annotated in this ontology, or in a child of this ontology">Number of affected genes</p></th> 
+<th scope="col"><p title="Total number of genes that are in this ontology">Total Genes</p></th> 
+<th scope="col"><p title="Minimum level of the graph the ontology belongs to">GO Level</p></th> 
+<th scope="col"><p title="Biological meaning of this ontology">ONTOLOGY DESCRIPTION</p></th> 
+<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
+</tr>
+<tr>
+<td >0.431737281110085</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >8393</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >8396</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8397</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td ></td></tr>
+<tr>
+<td >0.883953727574462</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >8398</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >8399</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/343069">HNRNPCL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8402</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999609099423</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8403</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >123</td><td >8456</td><td ><p title=" "> 62 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999765904346424</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8458</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999990418019</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8460</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >27</td><td >8465</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >13</td><td >8474</td><td ><p title=" "> 10 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.997606255422858</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8476</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8477</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >8480</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >228</td><td >8571</td><td ><p title=" "> 109 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8574</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >8579</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >8582</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >8582</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >27</td><td >8595</td><td ><p title=" "> 16 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999999976</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >8598</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >186</td><td >8673</td><td ><p title=" "> 91 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >8675</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999999998638</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8676</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td ></td></tr>
+<tr>
+<td >0.562423557524909</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >8677</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.998554076699302</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >8678</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8679</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >113</td><td >8728</td><td ><p title=" "> 57 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >8733</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.865968952788101</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >8734</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999880126565</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8735</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >8735</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >33</td><td >8748</td><td ><p title=" "> 15 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >21</td><td >8758</td><td ><p title=" "> 11 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999973755538</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >8760</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >186</td><td >8835</td><td ><p title=" "> 91 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8837</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >71</td><td >8866</td><td ><p title=" "> 35 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >8869</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >16</td><td >8876</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >8880</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999995473391934</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >8881</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >20</td><td >8890</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >8890</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >8894</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >147</td><td >8957</td><td ><p title=" "> 77 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.678112244765806</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8958</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >20</td><td >8969</td><td ><p title=" "> 12 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999999962</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >8972</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.848574501373309</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >8973</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999967669</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8974</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >31</td><td >8988</td><td ><p title=" "> 17 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999984753</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >8989</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10277">UBE4B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >66</td><td >9014</td><td ><p title=" "> 28 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999802236574</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9015</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999995803043027</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9016</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.813371412651875</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9018</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >17</td><td >9025</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999968797088174</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9027</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9029</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >9032</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.0387967506565191</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9033</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9033</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999635793547</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9034</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999642855621396</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9036</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999993403712724</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9038</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9039</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >9042</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999883</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9043</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >15</td><td >9048</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9049</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9053</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9057</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >123</td><td >9110</td><td ><p title=" "> 62 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >7.62445967728009e-06</td><td >0.0104073874594873</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >23</td><td >9113</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >9116</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >14</td><td >9122</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999986</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9125</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999957</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9127</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >28</td><td >9141</td><td ><p title=" "> 16 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.213768102516172</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9142</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td ></td></tr>
+<tr>
+<td >0.998031337427721</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9143</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.997063256832143</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9144</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >9147</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >9150</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/11332">ACOT7
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9151</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >12</td><td >9155</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >9</td><td >9159</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999992118271954</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9160</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999995122202946</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9162</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999477475614</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9163</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9167</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >13</td><td >9176</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999998949280558</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9177</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9180</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.964976191002882</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9182</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >75</td><td >9217</td><td ><p title=" "> 39 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >77</td><td >9253</td><td ><p title=" "> 40 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999266476</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9254</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >50</td><td >9269</td><td ><p title=" "> 19 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9270</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td ></td></tr>
+<tr>
+<td >0.997606255422858</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9272</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999559788416</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9273</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >13</td><td >9282</td><td ><p title=" "> 10 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999999999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >9285</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9289</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999483513</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9291</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >16</td><td >9297</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/6248">RSC1A1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9297</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999987114451</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9299</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9302</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >23</td><td >9311</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999999</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9313</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >84</td><td >9348</td><td ><p title=" "> 39 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.986817047041222</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9349</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9349</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999565</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9351</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/83858">ATAD3B
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >33</td><td >9367</td><td ><p title=" "> 18 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.964976191002882</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9369</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999134748617</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >23</td><td >9372</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9376</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.816921086523851</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9377</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999961987465</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9378</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999890965036</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9379</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >17</td><td >9388</td><td ><p title=" "> 12 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >33</td><td >9401</td><td ><p title=" "> 15 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.257701839341506</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9402</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >58</td><td >9418</td><td ><p title=" "> 20 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >27</td><td >9423</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >9426</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9427</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9428</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999864062</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9429</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999813</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9431</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9432</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td ></td></tr>
+<tr>
+<td >0.903634214838256</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9433</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26270">FBXO6
+</a> </td><td ></td></tr>
+<tr>
+<td >0.899131855322509</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9434</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >14</td><td >9440</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999373823857</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9441</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999662936851</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9442</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9442</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >113</td><td >9491</td><td ><p title=" "> 57 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9492</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >0.434831337611258</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9493</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9494</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79707">NOL9
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >0.887892707475135</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9495</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99823454890063</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9496</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9497</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999314549</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9498</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.997843780980295</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9499</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9500</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9502</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9504</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.278856593530068</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9505</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999973755538</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9507</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.998043121439732</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9508</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9509</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9511</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >9514</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999212</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9515</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9517</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >9521</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9521</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >14</td><td >9529</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.977032375994988</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9530</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999999976403</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9531</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999980777</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9532</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.997580207032268</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9533</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >82</td><td >9571</td><td ><p title=" "> 43 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999909854093</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9572</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >30</td><td >9589</td><td ><p title=" "> 18 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999999759723</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9591</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >94</td><td >9630</td><td ><p title=" "> 43 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.609667980812545</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9631</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999999522902</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9633</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >116</td><td >9685</td><td ><p title=" "> 62 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9689</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >31</td><td >9703</td><td ><p title=" "> 17 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9704</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >36</td><td >9717</td><td ><p title=" "> 13 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999437071084371</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9718</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999917975332729</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9719</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9719</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8764">TNFRSF14
+</a> </td><td ></td></tr>
+<tr>
+<td >0.103527610258715</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9720</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999996951665703</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9721</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999851109757937</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9723</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999999498</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9725</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999936903</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9727</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >8</td><td >9729</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >0.819224911253454</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9730</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >7</td><td >9733</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >14</td><td >9739</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999995122202946</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9741</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9741</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999977826</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9744</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9747</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.434831337611258</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9748</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td ></td></tr>
+<tr>
+<td >0.996115229169289</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9749</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td ></td></tr>
+<tr>
+<td >0.99999999995508</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9751</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >112</td><td >9799</td><td ><p title=" "> 54 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.226187574690202</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9800</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9801</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9804</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5394">EXOSC10
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9805</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999998704012</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9806</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >14</td><td >9812</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >4</td><td >9813</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >6</td><td >9815</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >65</td><td >9839</td><td ><p title=" "> 27 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >147</td><td >9902</td><td ><p title=" "> 76 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9907</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >33</td><td >9920</td><td ><p title=" "> 15 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >24</td><td >9930</td><td ><p title=" "> 12 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >84</td><td >9965</td><td ><p title=" "> 39 in total </p>
+</td><td ></td></tr>
+<tr>
+<td >0.999999549056226</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >2</td><td >9966</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999984471223</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >3</td><td >9967</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td ></td></tr>
+<tr>
+<td >0.999999999997064</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >1</td><td >9968</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td ></td></tr>
+<tr>
+<td >0.998626751135089</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9970</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td ></td></tr>
+<tr>
+<td >0.956732039674788</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >5</td><td >9971</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >0</td><td >9971</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
+</a> </td><td ></td></tr>
+<tr>
+<td >1</td><td >1</td><td ><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#term=children">  </a>
+</td><td >35</td><td >9980</td><td ><p title=" "> 10 in total </p>
+</td><td ></td></tr>

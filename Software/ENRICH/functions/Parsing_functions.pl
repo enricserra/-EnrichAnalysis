@@ -4,7 +4,7 @@ sub Clean_and_sort_vcf_file
 chomp($file);
 %header_hash = create_header_hash($file);
      if($controls){@controls=create_array_from_header_hash($controls);}
-     if($cases){@cases=create_array_from_header_hash($cases);print "@cases\n";}
+     if($cases){@cases=create_array_from_header_hash($cases);}
      else{my @file = split(/\t/,$file);@cases = @file[9..(scalar(@file)-1)];$cases = join(",",@cases);@cases = create_array_from_header_hash($cases);}
 }
 else{$file = remove_chr_and_change_Y_M_MT_X($file); my @file = split(/\t/,$file);if(check_valid_chr($file[0])){insert_onto_array_of_chr($file[0],$file);}}}

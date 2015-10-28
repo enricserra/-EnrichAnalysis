@@ -47,6 +47,7 @@
   require "$functions_path" . "/Clinvar_functions.pl";
   require "$functions_path" . "/Fisher.pl";
   require "$functions_path" . "/Loading_functions.pl";
+  require "$functions_path" . "/GOGraph_functions.pl";
   require "$vars_path" . "/variables.pl";
 
 
@@ -110,8 +111,8 @@ if($debug){print "KEGG\n.\n..\n...\n";}
 
   start_html($headers{"KEGG"},"$output_dir/KEGG.ejs"); 
 
-  %KEGG = load_ontology("$ontology_path" . "/KEGG.txt");
-  analysis_over_ontology(\%KEGG,"KEGG");
+#  %KEGG = load_ontology("$ontology_path" . "/KEGG.txt");
+#  analysis_over_ontology(\%KEGG,"KEGG");
 
   close_html();
 
@@ -126,8 +127,8 @@ if($debug){print "REACTOME\n.\n..\n...\n";}
 
   start_html($headers{"REACTOME"},"$output_dir/REACTOME.ejs");
 
-  %REACTOME = load_ontology("$ontology_path" . "/REACTOME.txt");
-  analysis_over_ontology(\%REACTOME,"REACTOME");
+#  %REACTOME = load_ontology("$ontology_path" . "/REACTOME.txt");
+#  analysis_over_ontology(\%REACTOME,"REACTOME");
 
   close_html();
 
@@ -146,9 +147,13 @@ if($debug){print "DONE\n";}
   	  start_html($headers{"GOBP"},"$output_dir/GOBP.ejs");
 
           %GOBP = load_ontology("$ontology_path" . "/GOBP.txt");
-          analysis_over_ontology(\%GOBP,"GOBP");
+          %GOfound = analysis_over_ontology(\%GOBP,"GOBP");
+
+
 
           close_html();
+          create_json_nested_graph("BP",$output_dir."/GOBP.json");
+
 
 	  if($debug){print "DONE\n";}
 
@@ -160,9 +165,9 @@ if($debug){print "DONE\n";}
 	  start_html($headers{"GOMF"},"$output_dir/GOMF.ejs");
 
 	  %GOMF = load_ontology("$ontology_path" . "/GOMF.txt");
-	  analysis_over_ontology(\%GOMF,"GOMF");
-
+	  %GOfound = analysis_over_ontology(\%GOMF,"GOMF");
 	  close_html();
+          create_json_nested_graph("MF",$output_dir."/GOMF.json");
 
           if($debug){print "DONE\n";}
 
@@ -174,9 +179,10 @@ if($debug){print "DONE\n";}
 	  start_html($headers{"GOCC"},"$output_dir/GOCC.ejs");
 
 	  %GOCC = load_ontology("$ontology_path" . "/GOCC.txt");
-	  analysis_over_ontology(\%GOCC,"GOCC");
+	  %GOfound = analysis_over_ontology(\%GOCC,"GOCC");
 
 	  close_html();
+          create_json_nested_graph("CC", $output_dir."/GOCC.json");
 
           if($debug){print "DONE\n";}
 

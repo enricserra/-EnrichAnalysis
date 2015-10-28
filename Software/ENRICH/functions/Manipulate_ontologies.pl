@@ -29,10 +29,10 @@ $genes_case_mutated++;
 sub get_pval_enrichment
 {
   my $size = $_[0];  
-  my $ont_descriptor=$_[1];
+  my $ontology_name = $_[1];
   my @genes = @_[2..(scalar(@_)-1)];
 
-  my $universe_size = ($universe{$ont_descriptor}{$coords}*scalar(@cases)*2)+1;
+  my $universe_size = ($universe{$ontology_name}{$coords}*scalar(@cases)*2)+1;
   my $i=0;
   my $case_counts= 0;
   my $this_particular_case_counts = 0;
@@ -56,15 +56,17 @@ sub get_pval_enrichment
 
 
 sub analysis_over_ontology
-{my $ont_descriptor = $_[1];
+{
+ my %ontology_found = ();
+ my $ontology_name = $_[1];
  my %ont_hash  = %{$_[0]};
  my $key ="";
  my $pval;
  my $case_count;
  my $control_count;
  my $genes_case_mutated;
- open_file_and_dump_it_to_OUT($headers{$ont_descriptor});
- open_results_file($output_dir,$ont_descriptor); 
+ open_results_file($output_dir,$ontology_name); 
+ open_file_and_dump_it_to_OUT($headers{$ontology_name});
  foreach $key (keys  %ont_hash)
  {
    %specific_ontology = ontology2hash($ont_hash{$key});
@@ -72,15 +74,17 @@ sub analysis_over_ontology
    @genes_matched_total = (keys %genes_matched);
    @genes_found = intersect_lists(\@genelist,\@genes_matched_total);
    if(@genes_found){
-     $ontology_size = $specific_ontology{"size"};
-     ($pval,$case_count,$control_count,$genes_case_mutated) = get_pval_from_list_of_genes($ontology_size,$ont_descriptor,@genelist);
-     $corrected = min($pval * $instances_in{$ont_descriptor},1);
+     
+     ($pval,$case_count,$control_count,$genes_case_mutated) = get_pval_from_list_of_genes($specific_ontology{"size"},$ontology_name,@genelist);
+     $ontology_found{$key} = $pval;
+     $corrected = min($pval * $instances_in{$ontology_name},1);
      print RESULTS "$pval\t$corrected\t$key\t$specific_ontology{Ngenes}\t$specific_ontology{Description}\t@genes_found\n";
-     $ref = \@genes_found;
-     dump_ontology("$ont_descriptor",$pval,$corrected,$key,$case_count,$control_count,$genes_case_mutated,$ref);
+     $gene_ref = \@genes_found;
+     dump_ontology($ontology_name, $pval, $corrected, $key, $case_count, $control_count, $genes_case_mutated, $gene_ref);
    }
  }
  close(OUT);
+ return(%ontology_found);
 }
 
 
