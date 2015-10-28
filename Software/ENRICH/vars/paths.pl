@@ -8,6 +8,8 @@ $genes_path = $local_path . "/GENES";
 
 $ontology_path = $local_path . "/ontologies";
 
+$go_map_paths = $local_path . "/GOGRAPH";
+
 $clinvar_path = $ontology_path . "/Clinvar.tsv";
 
 $clinvar_5_path = $ontology_path . "/Clinvar5.tsv";
@@ -28,6 +30,12 @@ $headers_path = $local_path . "/HEADERS";
 
 $fisher_path{"case_control"} = $local_path . "/functions/Pvalue_contingency_table.R";
 $fisher_path{"enrichment"} = $local_path . "/functions/Pvalue_enrichment.R";
+
+$gomap_path{"BP"} = $go_map_paths . "/GOBP_MAP";
+$gomap_path{"MF"} = $go_map_paths . "/GOMF_MAP";
+$gomap_path{"CC"} = $go_map_paths . "/GOCC_MAP";
+
+
 if($controls)
 {
   $fisher_path  = $fisher_path{"case_control"};
