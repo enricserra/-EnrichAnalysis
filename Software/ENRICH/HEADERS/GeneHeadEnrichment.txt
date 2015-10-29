@@ -13,7 +13,7 @@ alert("These are the results for the REACTOME analysis, performed over genes tha
 </head>
 <body>
 
- <% include ../../../results_header.ejs %>
+ <% include ../../results_header.ejs %>
 
 
 

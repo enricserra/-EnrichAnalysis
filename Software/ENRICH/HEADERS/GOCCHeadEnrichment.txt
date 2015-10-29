@@ -14,7 +14,7 @@ alert("These are the results for the Gene Ontology Cellular Component analysis, 
 </head>
 <body>
 
- <% include ../../../results_header.ejs %>
+ <% include ../../results_header.ejs %>
 
 
 

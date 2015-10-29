@@ -15,7 +15,7 @@ alert("Columns are sortable, just click on the header and you'll have the whole 
 </head>
 <body>
 
- <% include ../../../results_header.ejs %>
+ <% include ../../results_header.ejs %>
 
 <hr>
 

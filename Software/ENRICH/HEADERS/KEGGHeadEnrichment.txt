@@ -13,7 +13,7 @@ alert("These are the results for the KEGG analysis, performed over genes that ar
 </head>
 <body>
 
- <% include ../../../results_header.ejs %>
+ <% include ../../results_header.ejs %>
 
 
 
@@ -528,9 +528,7 @@ var forEach = function(object, block, context) {
 <th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
 <th scope="col"><p title="KEGG Number, the id used by kegg, click to go to KEGG term explanation">KEGG ID</p></th> 
 <th scope="col"><p title="How many variants are found in this Pathway, regarding cases samples"> |Variants| </p></th>
-<th scope="col"><p title="How many genes have at least one varian in this Pathway">Affected Genes
-controls</p></th>
+<th scope="col"><p title="How many genes have at least one varian in this Pathway">Affected Genes</p></th>
 <th scope="col"><p title="Total number of genes that are in this Pathway">Total Genes</p></th> 
 <th scope="col"><p title="Biological meaning of this ID">KEGG ID MEANING</p></th> 
-<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
 </tr>

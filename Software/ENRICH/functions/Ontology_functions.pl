@@ -1,3 +1,4 @@
+#TODO Change this for a hash
 sub dump_ontology
 {if($_[0] eq "KEGG"){if($controls){dump_KEGG_controls(@_);}else{dump_KEGG_enrichment(@_);}}
   elsif($_[0] eq "GOBP"){if($controls){dump_GOBP_controls(@_);}else{dump_GOBP_enrichment(@_);}}
@@ -53,7 +54,10 @@ my $counts  = $_[4];
   dump_genelist(@genelist);
   $gobp_line = $GOBP{$gobp_key};
   @gobp_line = split(/\t/,$gobp_line);
-  dump_description($gobp_line[4]);
+  $go_meaning{$gobp_key} =$gobp_line[4];
+  dump_description($go_meaning{$gobp_key});
+
+
   end_html_row();
 }
 sub dump_GOMF_enrichment
@@ -74,14 +78,17 @@ my $counts  = $_[4];
   dump_genelist(@genelist);
   $gomf_line = $GOMF{$gomf_key};
   @gomf_line = split(/\t/,$gomf_line);
-  dump_description($gomf_line[4]);
+  $go_meaning{$gomf_key} =$gomf_line[4];
+  dump_description($go_meaning{$gomf_key});
+
+
   end_html_row();
 }
 sub dump_GOCC_enrichment
 {
 my $pval=$_[1];
 my $corrected = $_[2];
-my $goCC_key = $_[3];
+my $gocc_key = $_[3];
 my $counts  = $_[4];
 
   my $genes_found_ref = $_[7];my @genelist = @{$genes_found_ref};
@@ -95,7 +102,10 @@ my $counts  = $_[4];
   dump_genelist(@genelist);
   $gocc_line = $GOCC{$gocc_key};
   @gocc_line = split(/\t/,$gocc_line);
-  dump_description($gocc_line[4]);
+  $go_meaning{$gocc_key} = $gocc_line[4];
+  dump_description($go_meaning{$gocc_key});
+
+
   end_html_row();
 }
 
@@ -171,12 +181,13 @@ sub dump_GOBP_controls
   dump_genelist(@genelist);
   $gobp_line = $GOBP{$gobp_key};
   @gobp_line = split(/\t/,$gobp_line);
-  dump_description($gobp_line[4]);
+  $go_meaning{$gobp_key} =$gobp_line[4];
+  dump_description($go_meaning{$gobp_key});
   end_html_row();
 }
 
 sub dump_GOMF_controls
-{  my $pval=$_[1];
+{ my $pval=$_[1];
   my $corrected = $_[2];
   my $gomf_key = $_[3];
   my $counts  = $_[4];
@@ -193,7 +204,9 @@ sub dump_GOMF_controls
   dump_genelist(@genelist);
   $gomf_line = $GOMF{$gomf_key};
   @gomf_line = split(/\t/,$gomf_line);
-  dump_description($gomf_line[4]);
+  $go_meaning{$gomf_key} =$gomf_line[4];
+  dump_description($go_meaning{$gomf_key});
+
   end_html_row();
 }
 sub dump_GOCC_controls
@@ -215,7 +228,8 @@ sub dump_GOCC_controls
   dump_genelist(@genelist);
   $gocc_line = $GOCC{$gocc_key};
   @gocc_line = split(/\t/,$gocc_line);
-  dump_description($gocc_line[4]);
+  $go_meaning{$gocc_key} = $gocc_line[4];
+  dump_description($go_meaning{$gocc_key});
   end_html_row();
 }
 

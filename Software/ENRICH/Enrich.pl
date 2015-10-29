@@ -111,8 +111,8 @@ if($debug){print "KEGG\n.\n..\n...\n";}
 
   start_html($headers{"KEGG"},"$output_dir/KEGG.ejs"); 
 
-#  %KEGG = load_ontology("$ontology_path" . "/KEGG.txt");
-#  analysis_over_ontology(\%KEGG,"KEGG");
+  %KEGG = load_ontology("$ontology_path" . "/KEGG.txt");
+  analysis_over_ontology(\%KEGG,"KEGG");
 
   close_html();
 
@@ -127,8 +127,8 @@ if($debug){print "REACTOME\n.\n..\n...\n";}
 
   start_html($headers{"REACTOME"},"$output_dir/REACTOME.ejs");
 
-#  %REACTOME = load_ontology("$ontology_path" . "/REACTOME.txt");
-#  analysis_over_ontology(\%REACTOME,"REACTOME");
+  %REACTOME = load_ontology("$ontology_path" . "/REACTOME.txt");
+  analysis_over_ontology(\%REACTOME,"REACTOME");
 
   close_html();
 
