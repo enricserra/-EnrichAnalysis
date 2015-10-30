@@ -1,5 +1,11 @@
+
+$p = fisher_test_controls(@ARGV);
+
+print "$p\n";
+
+
 sub hypergeometric
-{my ($a,$c,$b,$d) = @_;my $af =lfact($a);my $bf =lfact($b);my $cf =lfact($c);my $df =lfact($d);my $nf =lfact($a+$b+$c+$d);my $abf =lfact($a+$b);my $cdf =lfact($c+$d);my $acf =lfact($a+$c);my $bdf =lfact($b+$d);my $p = exp( ($abf + $cdf + $acf + $bdf) - ($af + $bf + $cf + $df + $nf) );if($p<0){print "@_\n";}return $p;}
+{my ($a,$c,$b,$d) = @_;my $af =lfact($a);my $bf =lfact($b);my $cf =lfact($c);my $df =lfact($d);my $nf =lfact($a+$b+$c+$d);my $abf =lfact($a+$b);my $cdf =lfact($c+$d);my $acf =lfact($a+$c);my $bdf =lfact($b+$d);my $p = exp( ($abf + $cdf + $acf + $bdf) - ($af + $bf + $cf + $df + $nf) );if($p<0){print "$p\t : HYP : @_\n";}return $p;}
 
 sub lfact 
 {my $x=$_[0];if (!defined $computedlgammas{$x+1}) {$computedlgammas{$x+1} = lgamma($x+1);}return $computedlgammas{$x+1};}
@@ -29,16 +35,7 @@ return($toreturn);}
 
 sub fisher_test_controls 
 {
-my $accumulated_p_val=0;
-my @table_2_x_2=@_;
-$table_2_x_2[1]=$table_2_x_2[1]+1;
-$table_2_x_2[0]=$table_2_x_2[0]-1;
-$table_2_x_2[2]++;
-$table_2_x_2[3]--;
-while($table_2_x_2[0]>=0 and $table_2_x_2[3]>=0){
-  
-  $accumulated_p_val=$accumulated_p_val+hypergeometric(@table_2_x_2);
-  $table_2_x_2[1]=$table_2_x_2[1]+1;$table_2_x_2[0]=$table_2_x_2[0]-1;$table_2_x_2[2]++;$table_2_x_2[3]--;}if($accumulated_p_val >1){$accumulated_p_val = 1;}return(1- $accumulated_p_val);}
+my $accumulated_p_val=0;my @table_2_x_2=@_;$table_2_x_2[1]=$table_2_x_2[1]+1;$table_2_x_2[0]=$table_2_x_2[0]-1;$table_2_x_2[2]++;$table_2_x_2[3]--;while($table_2_x_2[0]>=0 and $table_2_x_2[3]>=0){$accumulated_p_val=$accumulated_p_val+hypergeometric(@table_2_x_2);$table_2_x_2[1]=$table_2_x_2[1]+1;$table_2_x_2[0]=$table_2_x_2[0]-1;$table_2_x_2[2]++;$table_2_x_2[3]--;}return(1- $accumulated_p_val);}
 
 sub fisher_enrichment
 
@@ -100,7 +97,6 @@ sub get_pval_case_control
  $case_size = $size * scalar(@rel_cases_pos)*2;
  $controls_size = $size * scalar(@rel_controls_pos)*2;
  my $pval = fisher_test_controls($case_counts,$case_size,$control_counts,$controls_size);
-  if($pval <0 ){print "$pval \t CASE : $case_counts \t CASESIZE: $case_size\t CONTROL: $control_counts \t CONTSIZE : $controls_size\n";}
  chomp($pval);
  return($pval,$case_counts,$control_counts,$genes_case_mutated);
 }
@@ -114,4 +110,3 @@ sub get_pval_from_list_of_genes
 
 
 
-1;

@@ -69,7 +69,6 @@ sub dump_all_genes
     
       end_html_row();
 
-
     } 
 
   close_html();
@@ -111,21 +110,58 @@ sub REACTOME
 }
 
 
-sub GO
+sub GOBP
 {
-  $go_type = $_[0];
-  if($debug){print "GO$go_type\n.\n..\n...\n";}
+  if($debug){print "GOBP\n.\n..\n...\n";}
 
-  start_html($headers{"GO$go_type"},"$output_dir/GO$go_type\.ejs");
+  start_html($headers{"GOBP"},"$output_dir/GOBP.ejs");
 
-    %GOBP = load_ontology("$ontology_path" . "/GO$go_type\.txt");
-    %GOfound = analysis_over_ontology(\%GOBP,"GO$go_type");
+    %GOBP = load_ontology("$ontology_path" . "/GOBP.txt");
+    %GOfound = analysis_over_ontology(\%GOBP,"GOBP");
 
 
 
   close_html();
   
-  create_json_nested_graph("$go_type",$output_dir."/GO$go_type\.json");
+  create_json_nested_graph("BP",$output_dir."/GOBP.json");
+
+
+  if($debug){print "DONE\n";}
+
+}
+sub GOMF
+{
+  if($debug){print "GOMF\n.\n..\n...\n";}
+
+  start_html($headers{"GOMF"},"$output_dir/GOMF.ejs");
+
+    %GOMF = load_ontology("$ontology_path" . "/GOMF.txt");
+    %GOfound = analysis_over_ontology(\%GOMF,"GOMF");
+
+
+
+  close_html();
+  
+  create_json_nested_graph("MF",$output_dir."/GOMF.json");
+
+
+  if($debug){print "DONE\n";}
+
+}
+sub GOCC
+{
+  if($debug){print "GOCC\n.\n..\n...\n";}
+
+  start_html($headers{"GOCC"},"$output_dir/GOCC.ejs");
+
+    %GOCC = load_ontology("$ontology_path" . "/GOCC.txt");
+    %GOfound = analysis_over_ontology(\%GOCC,"GOCC");
+
+
+
+  close_html();
+  
+  create_json_nested_graph("CC",$output_dir."/GOCC.json");
 
 
   if($debug){print "DONE\n";}

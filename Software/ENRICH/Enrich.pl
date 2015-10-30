@@ -111,20 +111,20 @@ REACTOME();
 	# GOBP #
 	########
 
-	GO("BP");
+	GOBP();
 
 	########
 	# GOMF #
 	########
 
-	GO("MF");
+	GOMF();
 
 
 	########
 	# GOCC #
 	########
 
-	GO("CC");
+	GOCC();
 
 
 

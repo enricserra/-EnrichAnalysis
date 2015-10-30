@@ -31,7 +31,7 @@ sub dump_genelist
 start_cell();my $i=0;while($i<@_){dump_gene($_[$i]);$i++;}end_cell();}
  else{
 my $genelist = join(@_," ");
-my $scalar= scalar(@_);start_cell();print OUT "<p title=\"$genelist\"> $scalar in total </p>\n";end_cell();}
+my $scalar= scalar(@_);start_cell();print OUT "<p title=\"$genelist\"> $scalar </p>\n";end_cell();}
 }
 
 sub dump_gene
