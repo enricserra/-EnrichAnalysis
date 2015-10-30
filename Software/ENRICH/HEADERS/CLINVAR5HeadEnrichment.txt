@@ -529,9 +529,7 @@ var forEach = function(object, block, context) {
 <th scope="col"><p title="Reference Allele">REF</p></th>
 <th scope="col"><p title="Alternative Allele">ALT</p></th>
 <th scope="col"><p title="Gene names"> GENES Affected </p></th>
-<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1
-Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">
-USER'S GENOTYPE(S) </p></th>
+<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1 Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">USER'S GENOTYPE(S) </p></th>
 
 <th scope="col"><p title="Associated disease name, if several diseases are
 associated they are shown as Comma separated values.">CLNDBN</p></th>

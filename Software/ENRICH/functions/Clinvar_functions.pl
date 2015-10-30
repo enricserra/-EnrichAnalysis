@@ -1,3 +1,7 @@
+#This is really messi, clean plz
+
+
+
 sub clinvar_line_parser
 {
   my $line = $_[0];
@@ -19,6 +23,9 @@ sub parse_non_tag_fields
 {
   my %hash = ();
   $hash{CHROM} = $_[0];
+  $hash{CHROM}=~s/23/X/;
+  $hash{CHROM}=~s/24/Y/;
+  $hash{CHROM}=~s/25/MT/;
   $hash{POS} = $_[1];
   $hash{ID} = $_[2];
   $hash{REF} = $_[3];
@@ -29,24 +36,26 @@ sub parse_non_tag_fields
 
 sub dump_clinvar
 {
-  my %clinvar_non_tags = %{$_[0]};
-  my %clinvar_tags = %{$_[1]};
+  my %clinvar_non_tags = %{$_[0]};my %clinvar_tags = %{$_[1]};
+  my @caf = @{$clinvar_tags{"CAF"}};
+  $clinvar_tags{"CAF"} = join(",", @caf);
 
   my @clnsig = @{$clinvar_tags{CLNSIG}};
   start_html_row($clnsig[0]);
-  dump_CHROM($clinvar_non_tags{"CHROM"});
-  dump_POS($clinvar_non_tags{"POS"});
-  dump_ID($clinvar_non_tags{"ID"});
-  dump_GENEINFO($clinvar_tags{"GENEINFO"});
-  dump_CAF($clinvar_tags{"CAF"});
-  dump_REF($clinvar_non_tags{"REF"});
-  dump_ALT($clinvar_non_tags{"ALT"});
-  dump_GT($clinvar_non_tags{"GT"});
-  dump_CLNSIG(@clnsig);
-  dump_CLNACC($clinvar_tags{"CLNACC"});
-  dump_CLNDBN($clinvar_tags{"CLNDBN"});
-  dump_CLNDSDB($clinvar_tags{"CLNDSDB"},$clinvar_tags{"CLNDSDBID"});
-  dump_CLNSRC($clinvar_tags{"CLNSRC"},$clinvar_tags{"CLNSRCID"});
+
+    dump_single_value($clinvar_non_tags{"CHROM"});
+    dump_single_value($clinvar_non_tags{"POS"});
+    dump_ID($clinvar_non_tags{"ID"});
+    dump_GENEINFO($clinvar_tags{"GENEINFO"});
+    dump_single_value($clinvar_tags{"CAF"});
+    dump_single_value($clinvar_non_tags{"REF"});
+    dump_single_value($clinvar_non_tags{"ALT"});
+    dump_GT($clinvar_non_tags{"GT"});
+    dump_CLNSIG(@clnsig);
+    dump_CLNACC($clinvar_tags{"CLNACC"});
+    dump_CLNDBN($clinvar_tags{"CLNDBN"});
+    dump_CLNDSDB($clinvar_tags{"CLNDSDB"},$clinvar_tags{"CLNDSDBID"});
+    dump_CLNSRC($clinvar_tags{"CLNSRC"},$clinvar_tags{"CLNSRCID"});
 
   end_html_row();
 }
@@ -135,18 +144,7 @@ sub dump_GT
   }
 
 }
-sub dump_CHROM
-{ my $chr = $_[0];
-  $chr =~s/23/X/;
-  $chr=~s/24/Y/;
-  $chr=~s/25/MT/;
-  print OUT "<td> $_[0] </td>\n";
-}
 
-sub dump_POS
-{
-  print OUT "<td> $_[0] </td>\n";
-}
 
 sub dump_GENEINFO
 {
@@ -160,22 +158,10 @@ sub dump_GENEINFO
   print OUT "</td>\n";
 }
 
-sub dump_REF
+
+sub dump_single_value
 {
   print OUT "<td> $_[0] </td>\n";
-}
-
-sub dump_ALT
-{
-  print OUT "<td> $_[0] </td>\n";
-}
-
-sub dump_CAF
-{
-  my @arr = @{$_[0]};
-  if($arr[0]){
-  print OUT "<td><a> $arr[0],$arr[1] </a></td>\n";}
-  else{print OUT  "<td> NA </td>\n"}
 }
 
 sub dump_ID
@@ -213,10 +199,10 @@ sub dump_clinvar_5
   my $vcf = $_[0];my @vcf =split(/\t/,$vcf);
   my @genelist = @_[1..scalar(@_)-1];
   start_html_row();
-  dump_CHROM($vcf[0]);
-  dump_POS($vcf[1]);
-  dump_REF($vcf[3]);
-  dump_ALT($vcf[4]);
+  dump_single_value($vcf[0]);
+  dump_single_value($vcf[1]);
+  dump_single_value($vcf[3]);
+  dump_single_value($vcf[4]);
   my $gts = parse_gt(@vcf[8..scalar(@vcf)]);
   dump_genelist(@genelist); 
   dump_GT($gts);

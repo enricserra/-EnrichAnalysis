@@ -1,7 +1,7 @@
 
 
 #VARS DECLARATION 
-
+	$total_counts = 0;
         $vars_not_matched = 0;
         $vars_matched = 0;
         %vars_per_gene_control = ();
