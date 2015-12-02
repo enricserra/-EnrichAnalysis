@@ -52,7 +52,7 @@ if($controls)
 else
 {
   $fisher_path  = $fisher_path{"enrichment"};
-  $genehead = $headers_path . "/GeneHeadEnrichment.txt";
+  $genehead_path = $headers_path . "/GeneHeadEnrichment.txt";
   $headers{"KEGG"} = $headers_path . "/KEGGHeadEnrichment.txt";
   $headers{"REACTOME"} = $headers_path . "/REACTOMEHeadEnrichment.txt";
   $headers{"CLINVAR"}  = $headers_path . "/CLINVARHeadEnrichment.txt";

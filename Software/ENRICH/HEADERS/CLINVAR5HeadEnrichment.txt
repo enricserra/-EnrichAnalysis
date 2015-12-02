@@ -14,7 +14,24 @@ alert("These are the variants found in the genes that are know to be causative o
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='clinvar'">Found in ClinVar</button>
+        <button onclick="location.href='clinvar_related'">ClinVar
+        related</button>
+        <button onclick="location.href='results'"> Main results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+
+
 
 <hr>
 

@@ -13,7 +13,28 @@ alert("These are the results for the REACTOME analysis, performed over genes tha
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='genes'">Gene table</button>
+        <button onclick="location.href='gobp_table'">GO BP table</button>
+        <button onclick="location.href='gomf_table'">GO MF table</button>
+        <button onclick="location.href='gocc_table'">GO CC table</button>
+        <button onclick="location.href='BPgraph'">GO BP graph</button>
+        <button onclick="location.href='MFgraph'">GO MF graph</button>
+        <button onclick="location.href='CCgraph'">GO CC graph</button>
+        <button onclick="location.href='KEGG'">kegg table</button>
+        <button onclick="location.href='Reactome'">reactome table</button>
+        <button onclick="location.href='results'" color="red"> Main results</button>
+ 
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
 
 
 
@@ -523,12 +544,12 @@ var forEach = function(object, block, context) {
 				color: #584D0D; }
 	</style>
 <table class="sortable">
-<caption>Reactome Table</caption>
+<caption>Genes</caption>
 <tr>
 <th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
 <th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
-<th scope="col"><p title="Gene Name">Gene Name</p></th> 
-<th scope="col"><p title="How many positions are Mutated in this Gene CASES">CASES Counts</p></th> 
-<th scope="col"><p title="How many positions are Mutated in this Gene CONTROLS">Control Counts</p></th> 
+<th scope="col"><p title="Gene Name">Gene name</p></th> 
+<th scope="col"><p title="How many positions are Mutated in this Gene CASES">Cases counts</p></th> 
+<th scope="col"><p title="How many positions are Mutated in this Gene CONTROLS">Control counts</p></th> 
 </tr>
 

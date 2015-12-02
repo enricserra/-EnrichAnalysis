@@ -15,7 +15,22 @@ alert("Columns are sortable, just click on the header and you'll have the whole 
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='clinvar'">Found in ClinVar</button>
+        <button onclick="location.href='clinvar_related'">ClinVar related</button>
+        <button onclick="location.href='results'"> Main results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+
 
 <hr>
 
@@ -551,16 +566,16 @@ var forEach = function(object, block, context) {
 <th scope="col"><p title="Chromosome number">CHR</p></th>
 <th scope="col"><p title="Bp Position, click to open UCSC Genome Browser for
 that position">POS</p></th>
-<th scope="col"><p title="rsID, click to see dbSNP entry">RS</p></th>
+<th scope="col"><p title="rsID, click to see dbSNP entry">RS ID </p></th>
 <th scope="col"><p title="Common gene name/Gene number
-accession">GENE-NAME</p></th>
+accession">Gene name</p></th>
 <th scope="col"><p title="Common Allele Frequency [Reference allele frequency,
 Alternative allele frequency]">CAF</p></th>
 <th scope="col"><p title="Reference Allele">REF</p></th>
 <th scope="col"><p title="Alternative Allele">ALT</p></th>
 <th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1
 Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">
-USER'S GENOTYPE </p></th>
+Genotypes</p></th>
 <th scope="col"><p title="Variant Clinical Significance, 0 - unknown, 1
 -untested, 2 - non-pathogenic, 3 - probable-non-pathogenic, 4
 -probable-pathogenic, 5 - pathogenic, 6 - drug-response, 7

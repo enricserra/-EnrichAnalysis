@@ -529,12 +529,8 @@ var forEach = function(object, block, context) {
 <th scope="col"><p title="Reference Allele">REF</p></th>
 <th scope="col"><p title="Alternative Allele">ALT</p></th>
 <th scope="col"><p title="Gene names"> GENES Affected </p></th>
-<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1
-Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">
-USER'S CASES GENOTYPE(S) </p></th>
-<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1
-Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">
-USER'S CONTROLS GENOTYPE(S) </p></th>
+<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1 Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">USER'S GENOTYPE(S) </p></th>
+
 <th scope="col"><p title="Associated disease name, if several diseases are
 associated they are shown as Comma separated values.">CLNDBN</p></th>
 </tr>
@@ -544,8 +540,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Myasthenia_limb-girdle_familial</p></td>
 </tr>
 <tr>
@@ -554,8 +549,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> T </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Myasthenia_limb-girdle_familial</p></td>
 </tr>
 <tr>
@@ -564,8 +558,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
-</a> </td><td>  0/1 </td>
-<td>  0/1 1/1 </td>
+</a> </td><td>  0/1 0/1 1/1 1/1   </td>
 <td><p>Myasthenia_limb-girdle_familial</p></td>
 </tr>
 <tr>
@@ -574,8 +567,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
-</a> </td><td>  0/0 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/0 0/0 0/1 0/1   </td>
 <td><p>CARDIOMYOPATHY_DILATED_1LL</p></td>
 </tr>
 <tr>
@@ -584,8 +576,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> T </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>CARDIOMYOPATHY_DILATED_1LL</p></td>
 </tr>
 <tr>
@@ -594,8 +585,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/83715">ESPN
-</a> </td><td>  0/0 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/0 0/0 0/1 0/1   </td>
 <td><p>Deafness_without_vestibular_involvement_autosomal_dominant</p></td>
 </tr>
 <tr>
@@ -604,8 +594,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> TTCCTCCTCCTCCTCCTCCTCCTCCTC </td>
 <td> TTCCTCCTCCTCCTCCTCCTCCTC </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Charcot-Marie-Tooth_disease_recessive_intermediate_B<br>Distal_spinal_muscular_atrophy_autosomal_recessive_4</p></td>
 </tr>
 <tr>
@@ -614,8 +603,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> A </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/11315">PARK7
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/1 </td>
+</a> </td><td>  0/0 0/1 0/1 0/1   </td>
 <td><p>Parkinson_disease_7<br>Parkinson_disease_autosomal_recessive_early-onset_digenic_PINK1/DJ1</p></td>
 </tr>
 <tr>
@@ -624,8 +612,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Charcot-Marie-Tooth_disease_type_2A1<br>Pheochromocytoma</p></td>
 </tr>
 <tr>
@@ -634,8 +621,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/1 </td>
+</a> </td><td>  0/0 0/1 0/1 0/1   </td>
 <td><p>Charcot-Marie-Tooth_disease_type_2A1<br>Pheochromocytoma</p></td>
 </tr>
 <tr>
@@ -644,8 +630,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> A </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Charcot-Marie-Tooth_disease_type_2A1<br>Pheochromocytoma</p></td>
 </tr>
 <tr>
@@ -654,8 +639,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Ehlers-Danlos_syndrome_hydroxylysine-deficient</p></td>
 </tr>
 <tr>
@@ -664,8 +648,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Ehlers-Danlos_syndrome_hydroxylysine-deficient</p></td>
 </tr>
 <tr>
@@ -674,8 +657,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> A </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/0 </td>
+</a> </td><td>  0/1 0/0 0/0 0/0   </td>
 <td><p>Charcot-Marie-Tooth_disease_type_2A2<br>Hereditary_motor_and_sensory_neuropathy_with_optic_atrophy</p></td>
 </tr>
 <tr>
@@ -684,8 +666,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -694,8 +675,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -704,8 +684,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -714,8 +693,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -724,8 +702,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> T </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -734,8 +711,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -744,8 +720,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td>  0/1 </td>
-<td>  0/0 0/1 </td>
+</a> </td><td>  0/1 0/0 0/1 0/0   </td>
 <td><p>Bartter_syndrome_type_4b</p></td>
 </tr>
 <tr>
@@ -754,8 +729,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  0/1 </td>
-<td>  1/1 0/1 </td>
+</a> </td><td>  0/1 1/1 0/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -764,8 +738,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  0/1 </td>
-<td>  1/1 0/1 </td>
+</a> </td><td>  0/1 1/1 0/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -774,8 +747,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -784,8 +756,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> G </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -794,8 +765,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -804,8 +774,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> T </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -814,8 +783,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/0 </td>
+</a> </td><td>  0/0 0/1 0/0 0/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -824,8 +792,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/0 </td>
+</a> </td><td>  0/0 0/1 0/0 0/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -834,8 +801,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> A </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/0 </td>
+</a> </td><td>  0/0 0/1 0/0 0/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -844,8 +810,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> T </td>
 <td> C </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  1/1 1/1 </td>
+</a> </td><td>  1/1 1/1 1/1 1/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -854,8 +819,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td>  1/1 </td>
-<td>  0/1 1/1 </td>
+</a> </td><td>  1/1 0/1 1/1 0/1   </td>
 <td><p>Bartter_syndrome_type_3<br>Bartter_syndrome_type_3_with_hypocalciuria</p></td>
 </tr>
 <tr>
@@ -864,8 +828,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> A </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/0 </td>
+</a> </td><td>  0/0 0/1 0/0 0/1   </td>
 <td><p>CATARACT_6_AGE-RELATED_CORTICAL<br>Cataract_6</p></td>
 </tr>
 <tr>
@@ -874,8 +837,7 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> G </td>
 <td> A </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
-</a> </td><td>  1/1 </td>
-<td>  0/1 1/1 </td>
+</a> </td><td>  1/1 0/1 1/1 0/1   </td>
 <td><p>CATARACT_6_AGE-RELATED_CORTICAL<br>Cataract_6</p></td>
 </tr>
 <tr>
@@ -884,7 +846,6 @@ associated they are shown as Comma separated values.">CLNDBN</p></th>
 <td> C </td>
 <td> T </td>
 <td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
-</a> </td><td>  0/0 </td>
-<td>  0/1 0/0 </td>
+</a> </td><td>  0/0 0/1 0/0 0/1   </td>
 <td><p>CATARACT_6_AGE-RELATED_CORTICAL<br>Cataract_6</p></td>
 </tr>

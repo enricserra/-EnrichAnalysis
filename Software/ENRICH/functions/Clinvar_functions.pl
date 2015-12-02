@@ -76,16 +76,17 @@ sub dump_CLNDBN
 sub dump_CLNSRC
 {
   my @clnsrc  = @{$_[0]};
+  
   my @clnsrcid = @{$_[1]};
   my $i = 0;
   print OUT "<td>";
   while($i<@clnsrc)
   {
     $clnsrc[$i] =~s/" "/_/g;
+    if($clnsrc[$i] ne "."){
     print OUT "<p><a href=\"$clnsrc_hash{$clnsrc[$i]}";
     $clnsrc[$i] =~s/_/" "/g;
-
-    print OUT "$clnsrcid[$i]\"> $clnsrc[$i] </a></p>";
+    print OUT "$clnsrcid[$i]\"> $clnsrc[$i] </a></p>";}
     $i++;
   }
   print OUT "</td>\n";
@@ -101,7 +102,9 @@ sub dump_CLNDSDB
   print OUT "<td>";
   while($i<@clndsdb)
   {
-    print OUT "<p><a href=\"$references_hash{$clndsdb[$i]}$clndsdbid[$i]\"> $clndsdb[$i] </a></p>";
+    if($clndsdb[$i] ne "."){
+
+    print OUT "<p><a href=\"$references_hash{$clndsdb[$i]}$clndsdbid[$i]\"> $clndsdb[$i] </a></p>";}
     $i++;
   }
   print OUT "</td>\n";
