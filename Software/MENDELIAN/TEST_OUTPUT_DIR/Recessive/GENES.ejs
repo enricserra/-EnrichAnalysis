@@ -6,7 +6,7 @@
 function myFunction()
 {
 
-alert("These are the results for the Gene Ontology Biological Process analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+alert("These are the results for the Gene analysis recessive inheritance, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, hover over them and a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
 }
 
 </script>
@@ -15,8 +15,29 @@ alert("These are the results for the Gene Ontology Biological Process analysis, 
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
 
+        <button onclick="location.href='recessive_genes'">Gene table</button>
+        <button onclick="location.href='recessive_goBP'">GO BP table</button>
+        <button onclick="location.href='recessive_goMF'">GO MF table</button>
+        <button onclick="location.href='recessive_goCC'">GO CC table</button>
+        <button onclick="location.href='recessive_KEGG'">kegg table</button>
+        <button onclick="location.href='recessive_REACTOME'">reactome
+        table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+ 
 
 
 <hr>
@@ -500,40 +521,50 @@ var forEach = function(object, block, context) {
 
 
 <style type=text/css>
-	.sortable {
-		padding: 0;
-		margin: 0;
-		border-collapse: collapse;
-		font-size: 0.8em; }
-			.sortable caption {
-				padding-bottom: 0.3em;
-				font-size: 1.5em;
-				text-align: left; }
-			.sortable th {
-				padding: 0.2em;
-				background-color: #4254B2;
-				border: 1px solid #99A8F3;
-				color: #FFF;
-				text-align: left; }
-			.sortable td {
-				padding: 0.2em;
-				background-color: rgba(189, 200, 255, 0.7);
-				border: 1px solid #6295BA; }
-			.sortable tr:hover th[scope=row], .sortable tr:hover td {
-				background-color: #6295BA; }
-			.sortable a {
-				color: #192C8C; }
-	</style>
+        .sortable {
+                padding: 0;
+                margin: 0;
+                border-collapse: collapse;
+                font-size: 0.8em; }
+                        .sortable caption {
+                                padding-bottom: 0.3em;
+                                font-size: 1.5em;
+                                text-align: left; }
+                        .sortable th {
+                                padding: 0.2em;
+                                background-color: #DC143C;
+                                border: 1px solid #A52A2A;
+                                color: #FFF;
+                                text-align: left; }
+                        .sortable td {
+                                padding: 0.2em;
+                                background-color: rgba(255, 20, 15, 0.7);
+                                border: 1px solid #DC143C; }
+                        .sortable tr:hover th[scope=row], .sortable tr:hover
+                        td {
+                                background-color: #EC143C; }
+                        .sortable a {
+                                color: #192C8C; }
+
+        </style>
 <table class="sortable">
-<caption>GO Biological Process Table</caption>
+<caption> GENES recessive table </caption>
+
+
 
 <tr>
-<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
-<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
-<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th> 
-<th scope="col"><p title="How many variants are found in this GO term">Observed variants</p></th>
-<th scope="col"><p title="Variants expected in this GO term">Expected variants</p></th>
-<th scope="col"><p title="Genes with at least one variant in this ontology, or in a child of this ontology">Affected genes</p></th> 
-<th scope="col"><p title="Total number of genes that are in this ontology">Total genes</p></th> 
-<th scope="col"><p title="Biological meaning of this ontology">Ontology description</p></th> 
+<th scope="col"><p title=" Gene ID "> Gene name</p></th> 
+<th scope="col"><p title=" Chromosome of the variant found "> CHROM </p></th> 
+<th scope="col"><p title=" Position of the variant found "> POS </p></th>
+<th scope="col"><p title=" Reference allele as found in your vcf "> REF </p></th>
+<th scope="col"><p title=" Alternative allele as found in your vcf "> ALT </p></th>
+<th scope="col"><p title=" GT for your case samples as found in your vcf "> Cases GT </p></th>
+<th scope="col"><p title=" GT for your controls samples as found in your vcf "> Controls GT </p></th>
+
 </tr>
+<tr>
+<td><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td><div>1</div><td><div>1237604</div></td></td><td><div>T</div></td><td><div>C</div></td><td><div>1/1 1/1 1/1</div></td><td><div>0/1</div></td></tr>
+<tr>
+<td><a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </td><td><div>1</div><div>1</div><td><div>13036654</div><div>13038327</div></td></td><td><div>C</div><div>G</div></td><td><div>T</div><div>T</div></td><td><div>1/1 0/0 0/1</div><div>0/1 1/1 1/1</div></td><td><div>0/1</div><div>0/1</div></td></tr>

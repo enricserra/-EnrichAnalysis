@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html>
-
-
 <script>
 function myFunction()
 {
 
-alert("Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+alert("These are the results for the KEGG analysis, performed over genes that are different from the reference on your vcf file.Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
 }
 
 </script>
@@ -15,30 +13,28 @@ alert("Columns are sortable, just click on the header and you'll have the whole 
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='dominant_genes'">Gene table</button>
+        <button onclick="location.href='dominant_goBP'">GO BP table</button>
+        <button onclick="location.href='dominant_goMF'">GO MF table</button>
+        <button onclick="location.href='dominant_goCC'">GO CC table</button>
+        <button onclick="location.href='dominant_KEGG'">kegg table</button>
+        <button onclick="location.href='dominant_REACTOME'">reactome
+        table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
+
+
 
 <hr>
-
-
-<button id="5"> Hide/Show Pathogenic </button>
-<button id="4"> Hide/Show Probable Pathogenic </button>
-<button id="2"> Hide/Show Non Pathogenic </button>
-<button id="255"> Hide/Show Other </button>
-<button id="3"> Hide/Show Probable non pathogenic </button>
-<button id="6">Hide/Show Drug response </button>
-<button id="1"> Hide/Show Untested </button>
-<button id="0"> Hide/Show Unknown </button>
-<button id="7"> Hide/Show Histocompatibility </button>
-
-<script>
-$(document).ready(function(){
-
-  $("button").click(function(){
-   var id = $(this).attr('id');
-    $("."+id).toggle();
-  });
-});
-</script>
 
 <script>
 var stIsIE = /*@cc_on!@*/false;
@@ -194,7 +190,7 @@ sorttable = {
     for (var i=0; i<table.tBodies[0].rows.length; i++) {
       text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
       if (text != '') {
-        if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
           return sorttable.sort_numeric;
         }
         // check for a date: dd/mm/yyyy or dd/mm/yy
@@ -515,7 +511,8 @@ var forEach = function(object, block, context) {
 };
 </script>
 
-	<style type=text/css>		
+
+<style type=text/css>
 	.sortable {
 		padding: 0;
 		margin: 0;
@@ -527,55 +524,31 @@ var forEach = function(object, block, context) {
 				text-align: left; }
 			.sortable th {
 				padding: 0.2em;
-				background-color: #7D98B3;
-				border: 1px solid #BCD0E4;
+				background-color: #B29A12;
+				border: 1px solid #DED18A;
 				color: #FFF;
 				text-align: left; }
 			.sortable td {
 				padding: 0.2em;
-				background-color: rgba(188, 208, 228, 0.7);
-				border: 1px solid #8FADCC; }
+				background-color: rgba(255, 237, 140, 0.7);
+				border: 1px solid #CCBA52; }
 			.sortable tr:hover th[scope=row], .sortable tr:hover td {
-				background-color: #8FADCC; }
+				background-color: #CCBA52; }
 			.sortable a {
-				color: #3E4C59; }
+				color: #584D0D; }
 	</style>
 
-
-
-
 <table class="sortable">
+<caption> KEGG dominant table </caption>
 
-<caption>Clinvar Annotation</caption>
 <tr>
-<th scope="col"><p title="Chromosome number">CHR</p></th>
-<th scope="col"><p title="Bp Position, click to open UCSC Genome Browser for
-that position">POS</p></th>
-<th scope="col"><p title="rsID, click to see dbSNP entry">RS ID </p></th>
-<th scope="col"><p title="Common gene name/Gene number
-accession">Gene name</p></th>
-<th scope="col"><p title="Common Allele Frequency [Reference allele frequency,
-Alternative allele frequency]">CAF</p></th>
-<th scope="col"><p title="Reference Allele">REF</p></th>
-<th scope="col"><p title="Alternative Allele">ALT</p></th>
-<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1
-Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">
-Genotypes</p></th>
-<th scope="col"><p title="Variant Clinical Significance, 0 - unknown, 1
--untested, 2 - non-pathogenic, 3 - probable-non-pathogenic, 4
--probable-pathogenic, 5 - pathogenic, 6 - drug-response, 7
--histocompatibility, 255 - other">CLNSIG</p></th>
-
-<th scope="col"><p title="Clinvar accession number">ACCESSION</p></th>
-<th scope="col"><p title="Associated disease name">CLNDBN</p></th>
-
-<th scope="col"><p title="Associated disease name details">CLNDSDB</p></th>
-
-
-<th scope="col"><p title="Variant Clinical Chanels">CLNSRC</p></th>
-
-
-
-
+<th scope="col"><p title=" KEGG identifier"> KEGG ID </p></th>
+<th scope="col"><p title=" KEGG ID meaning "> Description </p></th>
+<th scope="col"><p title=" Genes that have dominant like inheritance pattern
+related to this ontology "> Genes affected </p></th>
+<th scope="col"><p title=" Total amount of genes in this ontology"> Total
+genes </p></th>
 
 </tr>
+
+

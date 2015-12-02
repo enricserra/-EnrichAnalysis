@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html>
-
-
 <script>
 function myFunction()
 {
 
-alert("These are the results for the Gene Ontology Molecular Function analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+alert("These are the results for the KEGG analysis, performed over genes that are different from the reference on your vcf file.Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
 }
 
 </script>
@@ -15,7 +13,28 @@ alert("These are the results for the Gene Ontology Molecular Function analysis, 
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+
+        <button onclick="location.href='recessive_genes'">Gene table</button>
+        <button onclick="location.href='recessive_goBP'">GO BP table</button>
+        <button onclick="location.href='recessive_goMF'">GO MF table</button>
+        <button onclick="location.href='recessive_goCC'">GO CC table</button>
+        <button onclick="location.href='recessive_KEGG'">kegg table</button>
+        <button onclick="location.href='recessive_REACTOME'">reactome
+        table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
 
 
 
@@ -267,7 +286,6 @@ sorttable = {
   sort_numeric: function(a,b) {
     return (Number(a[0])-Number(b[0]));
   },
-
   sort_alpha: function(a,b) {
     if (a[0]==b[0]) return 0;
     if (a[0]<b[0]) return -1;
@@ -497,7 +515,6 @@ var forEach = function(object, block, context) {
 };
 </script>
 
- 
 
 <style type=text/css>
 	.sortable {
@@ -511,29 +528,49 @@ var forEach = function(object, block, context) {
 				text-align: left; }
 			.sortable th {
 				padding: 0.2em;
-				background-color: #4254B2;
-				border: 1px solid #99A8F3;
+				background-color: #B29A12;
+				border: 1px solid #DED18A;
 				color: #FFF;
 				text-align: left; }
 			.sortable td {
 				padding: 0.2em;
-				background-color: rgba(189, 200, 255, 0.7);
-				border: 1px solid #6295BA; }
+				background-color: rgba(255, 237, 140, 0.7);
+				border: 1px solid #CCBA52; }
 			.sortable tr:hover th[scope=row], .sortable tr:hover td {
-				background-color: #6295BA; }
+				background-color: #CCBA52; }
 			.sortable a {
-				color: #192C8C; }
+				color: #584D0D; }
 	</style>
+
 <table class="sortable">
-<caption> GO Molecular Function Table </caption>
+<caption> KEGG recessive table </caption>
 
 <tr>
-<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
-<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
-<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th>
-<th scope="col"><p title="How many variants are found in this GO term">Observed variants</p></th>
-<th scope="col"><p title="How many variants are expected in this GO term">Expected variants</p></th>
-<th scope="col"><p title="How many genes are annotated in this ontology, or in a child of this ontology">Affected genes</p></th> 
-<th scope="col"><p title="Total number of genes that are in this ontology">Total genes</p></th> 
-<th scope="col"><p title="Biological meaning of this ontology">Ontology description</p></th> 
+<th scope="col"><p title=" KEGG identifier"> KEGG ID </p></th>
+<th scope="col"><p title=" KEGG ID meaning "> Description </p></th>
+<th scope="col"><p title=" Genes that have recessive like inheritance pattern
+related to this ontology "> Genes affected </p></th>
+<th scope="col"><p title=" Total amount of genes in this ontology"> Total
+genes </p></th>
+
 </tr>
+
+
+<tr>
+<td><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04120"> 04120 </a>
+</td><td>Ubiquitin mediated proteolysis</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><td>135</td></td></tr>
+<tr>
+<td><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa05012"> 05012 </a>
+</td><td>Parkinson's disease</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><td>130</td></td></tr>
+<tr>
+<td><a href="http://www.genome.jp/kegg-bin/show_pathway?hsa04141"> 04141 </a>
+</td><td>Protein processing in endoplasmic reticulum</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </div><td>165</td></td></tr>

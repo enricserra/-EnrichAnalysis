@@ -5,7 +5,8 @@
 <script>
 function myFunction()
 {
-alert("These are the results for the Gene Ontology Cellular Component analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+
+alert("These are the results for the Gene Ontology Molecular Function analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
 }
 
 </script>
@@ -14,7 +15,24 @@ alert("These are the results for the Gene Ontology Cellular Component analysis, 
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='dominant_genes'">Gene table</button>
+        <button onclick="location.href='dominant_goBP'">GO BP table</button>
+        <button onclick="location.href='dominant_goMF'">GO MF table</button>
+        <button onclick="location.href='dominant_goCC'">GO CC table</button>
+        <button onclick="location.href='dominant_KEGG'">kegg table</button>
+        <button onclick="location.href='dominant_REACTOME'">reactome
+        table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
 
 
 
@@ -497,6 +515,7 @@ var forEach = function(object, block, context) {
 </script>
 
 
+
 <style type=text/css>
 	.sortable {
 		padding: 0;
@@ -523,15 +542,117 @@ var forEach = function(object, block, context) {
 				color: #192C8C; }
 	</style>
 <table class="sortable">
-<caption> GO Celular Component Table </caption>
+<caption>GO Molecular Function dominant table</caption>
 
 <tr>
-<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
-<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
-<th scope="col"><p title="Gene Ontology id, click to go to EBI term explanation">GO ID</p></th> 
-<th scope="col"><p title="How many variants are found in this Ontology">Observed variants</p></th> 
-<th scope="col"><p title="How many variants are expected in this Ontology">Expected variants</p></th>
-<th scope="col"><p title="Genes with at least one variant in this ontology, or in a child of this ontology">Affected genes</p></th> 
-<th scope="col"><p title="Total number of genes that are in this ontology">Total genes</p></th> 
-<th scope="col"><p title="Biological meaning of this ontology">Ontology description</p></th> 
+<th scope="col"><p title="Gene ontology identifier">GO ID</p></th> 
+<th scope="col"><p title=" Gene ontology meaning ">GO MEANING</p></th> 
+<th scope="col"><p title=" Genes that have dominant like inheritance pattern
+related to this ontology "> Genes affected </p></th> 
+<th scope="col"><p title=" Total amount of genes in this ontology"> Total genes </p></th>
+
 </tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008134#term=children"> GO:0008134 </a>
+</td><td>transcription factor binding</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>461</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051427#term=children"> GO:0051427 </a>
+</td><td>hormone receptor binding</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>149</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005488#term=children"> GO:0005488 </a>
+</td><td>binding</td><td><div><p title="CLCN6 CLCNKA DFFB MEGF6 EPHA2 MTOR MTHFR PEX14 PGD PLOD1 SCNN1D TNFRSF1B ISG15 MFN2 MASP2 UTS2 CLSTN1 KIF1B CAMTA1 HSPB7 ARHGEF16 SDF4 CASZ1 PANK4 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 PLEKHN1 ARHGEF19 C1orf86 ATAD3C NPHP4 KLHL17 HNRNPCL1 SPATA21 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 43 </p>
+</div><div><p title="DFFB MEGF6 SCNN1D ISG15 UTS2 ARHGEF16 SDF4 PRDM16 PRAMEF1 NADK MMEL1 ATAD3B PLEKHN1 MIB2 ATAD3C KLHL17 PRAMEF13"> 17 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 SPATA21 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 19 </p>
+</div><td>11957</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005102#term=children"> GO:0005102 </a>
+</td><td>receptor binding</td><td><div><p title="PEX14 UTS2 ARHGEF16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1197</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0003674#term=children"> GO:0003674 </a>
+</td><td>molecular_function</td><td><div><p title="CLCN6 CLCNKA DFFB MEGF6 EPHA2 MTOR MTHFR PEX14 PGD PLOD1 SCNN1D TNFRSF1B KCNAB2 PER3 ISG15 MFN2 MASP2 UTS2 CLSTN1 KIF1B CAMTA1 HSPB7 ARHGEF16 SLC45A1 SDF4 CASZ1 PANK4 PLEKHG5 CELA2A PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 GPR157 PLEKHN1 ARHGEF19 C1orf86 ATAD3C NPHP4 KLHL17 HNRNPCL1 SPATA21 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 48 </p>
+</div><div><p title="DFFB MEGF6 SCNN1D PER3 ISG15 UTS2 ARHGEF16 SLC45A1 SDF4 PRDM16 PRAMEF1 NADK MMEL1 ATAD3B PLEKHN1 MIB2 ATAD3C KLHL17 PRAMEF13"> 19 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 CASZ1 CELA2A PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 SPATA21 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 20 </p>
+</div><td>15343</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0005515#term=children"> GO:0005515 </a>
+</td><td>protein binding</td><td><div><p title="DFFB MEGF6 EPHA2 MTOR PEX14 PLOD1 SCNN1D TNFRSF1B ISG15 MFN2 MASP2 UTS2 KIF1B HSPB7 ARHGEF16 SDF4 PRDM16 PRAMEF1 PRAMEF2 C1orf86 NPHP4 KLHL17 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 27 </p>
+</div><div><p title="DFFB MEGF6 SCNN1D ISG15 UTS2 ARHGEF16 SDF4 PRDM16 PRAMEF1 MIB2 KLHL17 PRAMEF13"> 12 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B HSPB7 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>7535</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0035257#term=children"> GO:0035257 </a>
+</td><td>nuclear hormone receptor binding</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>129</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042974#term=children"> GO:0042974 </a>
+</td><td>retinoic acid receptor binding</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>43</td></td></tr>

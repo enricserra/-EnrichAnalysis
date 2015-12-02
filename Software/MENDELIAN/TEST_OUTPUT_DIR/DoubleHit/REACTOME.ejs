@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html>
-
 <script>
 function myFunction()
 {
 
-alert("These are the variants found in the genes that are know to be causative of their correspondig diseases according to Clinvar.\n\nToo long REF or ALT alleles have been compressed to the words REF and ALT, hovering on them will display the actual alleles in your vcf file.\n\nColumns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+alert("These are the results for the REACTOME analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
 }
 
 </script>
@@ -14,10 +13,34 @@ alert("These are the variants found in the genes that are know to be causative o
 </head>
 <body>
 
- <% include ../../results_header.ejs %>
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+
+        <button onclick="location.href='double_hit_genes'">Gene table</button>
+        <button onclick="location.href='double_hit_goBP'">GO BP table</button>
+        <button onclick="location.href='double_hit_goMF'">GO MF table</button>
+        <button onclick="location.href='double_hit_goCC'">GO CC table</button>
+        <button onclick="location.href='double_hit_KEGG'">kegg table</button>
+        <button onclick="location.href='double_hit_REACTOME'">reactome
+        table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+
+
+
+
 
 <hr>
-
 
 <script>
 var stIsIE = /*@cc_on!@*/false;
@@ -173,7 +196,7 @@ sorttable = {
     for (var i=0; i<table.tBodies[0].rows.length; i++) {
       text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
       if (text != '') {
-        if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
           return sorttable.sort_numeric;
         }
         // check for a date: dd/mm/yyyy or dd/mm/yy
@@ -265,6 +288,7 @@ sorttable = {
   sort_numeric: function(a,b) {
     return (Number(a[0])-Number(b[0]));
   },
+
   sort_alpha: function(a,b) {
     if (a[0]==b[0]) return 0;
     if (a[0]<b[0]) return -1;
@@ -494,7 +518,8 @@ var forEach = function(object, block, context) {
 };
 </script>
 
-	<style type=text/css>		
+
+<style type=text/css>
 	.sortable {
 		padding: 0;
 		margin: 0;
@@ -506,31 +531,184 @@ var forEach = function(object, block, context) {
 				text-align: left; }
 			.sortable th {
 				padding: 0.2em;
-				background-color: #7D98B3;
-				border: 1px solid #BCD0E4;
+				background-color: #B29A12;
+				border: 1px solid #DED18A;
 				color: #FFF;
 				text-align: left; }
 			.sortable td {
 				padding: 0.2em;
-				background-color: rgba(188, 208, 228, 0.7);
-				border: 1px solid #8FADCC; }
+				background-color: rgba(255, 237, 140, 0.7);
+				border: 1px solid #CCBA52; }
 			.sortable tr:hover th[scope=row], .sortable tr:hover td {
-				background-color: #8FADCC; }
+				background-color: #CCBA52; }
 			.sortable a {
-				color: #3E4C59; }
+				color: #584D0D; }
 	</style>
-
 <table class="sortable">
+<caption> REACTOME double-hit table </caption>
 
-<caption>Variants from the user input that are inside genes that cause diseases according to ClinVar</caption>
 <tr>
-<th scope="col"><p title="Chromosome identifier">CHROM</p></th>
-<th scope="col"><p title="Bp Position, click to open UCSC Genome Browser for that position">POS</p></th>
-<th scope="col"><p title="Reference Allele">REF</p></th>
-<th scope="col"><p title="Alternative Allele">ALT</p></th>
-<th scope="col"><p title="Gene names"> GENES Affected </p></th>
-<th scope="col"><p title="Genotype 0/0 Homozygous Reference/Reference 0/1 Heterozygous Reference/Alternative 1/1 Homozygous Alternative/Alternative">USER'S GENOTYPE(S) </p></th>
+<th scope="col"><p title=" Reactome identifier "> REACTOME ID </p></th>
+<th scope="col"><p title=" REACTOME ID meaning "> Description </p></th>
+<th scope="col"><p title=" Genes that have double-hit like inheritance pattern
+related to this ontology "> Genes affected </p></th>
+<th scope="col"><p title=" Total amount of genes in this ontology"> Total
+genes </p></th>
 
-<th scope="col"><p title="Associated disease name, if several diseases are
-associated they are shown as Comma separated values.">CLNDBN</p></th>
 </tr>
+
+
+<tr>
+<td>118 </td><td>Antigen processing: Ubiquitination & Proteasome degradation</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><td>211</td></td></tr>
+<tr>
+<td>675 </td><td>Loss of Function of TGFBR1 in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>124 </td><td>Apoptotic execution  phase</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><td>52</td></td></tr>
+<tr>
+<td>351 </td><td>Disease</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>984</td></td></tr>
+<tr>
+<td>1180 </td><td>Signaling by TGF-beta Receptor Complex</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1267 </td><td>TGFBR2 Kinase Domain Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1266 </td><td>TGFBR1 LBD Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>120 </td><td>Apoptosis</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><td>157</td></td></tr>
+<tr>
+<td>1268 </td><td>TGFBR2 MSI Frameshift Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1181 </td><td>Signaling by TGF-beta Receptor Complex in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>498 </td><td>GPVI-mediated activation cascade</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>31</td></td></tr>
+<tr>
+<td>89 </td><td>Adaptive Immune System</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><td>645</td></td></tr>
+<tr>
+<td>1116 </td><td>SMAD4 MH2 Domain Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1113 </td><td>SMAD2/3 MH2 Domain Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>674 </td><td>Loss of Function of SMAD4 in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1264 </td><td>TGF-beta receptor signaling in EMT (epithelial to mesenchymal transition)</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>16</td></td></tr>
+<tr>
+<td>552 </td><td>Hemostasis</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>471</td></td></tr>
+<tr>
+<td>1139 </td><td>Signal Transduction</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>1893</td></td></tr>
+<tr>
+<td>673 </td><td>Loss of Function of SMAD2/3 in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1265 </td><td>TGFBR1 KD Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>1114 </td><td>SMAD2/3 Phosphorylation Motif Mutants in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>587 </td><td>Immune System</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><td>1175</td></td></tr>
+<tr>
+<td>247 </td><td>Class I MHC mediated antigen processing & presentation</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </div><td>253</td></td></tr>
+<tr>
+<td>121 </td><td>Apoptosis induced DNA fragmentation</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><td>13</td></td></tr>
+<tr>
+<td>676 </td><td>Loss of Function of TGFBR2 in Cancer</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>70</td></td></tr>
+<tr>
+<td>56 </td><td>Activation of DNA fragmentation factor</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </div><td>13</td></td></tr>
+<tr>
+<td>900 </td><td>Platelet activation, signaling and aggregation</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </div><td>205</td></td></tr>
