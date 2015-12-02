@@ -1,4 +1,4 @@
-$local_path = "/var/www/html/dat.cnag.cat/dat.cnag.cat_preproduction/Software/MENDELIAN";
+$local_path = "./";
 $localDirectory  =$local_path;
 
 

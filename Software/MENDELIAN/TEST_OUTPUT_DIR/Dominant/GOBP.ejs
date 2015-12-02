@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html>
+
+
+<script>
+function myFunction()
+{
+
+alert("These are the results for the Gene Ontology Biological Process analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nSome additional information links have been added, they are highlighted in blue. In order not to leave the current document right click them and select open in a new tab/window.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
+}
+
+</script>
+
+<head>
+</head>
+<body>
+
+<link rel="stylesheet" href="public/style/style.css" />
+<div id="menu">
+        <a href="home" title="Back to index"><img
+        src="public/images/home.png"></a>
+        <a href="#" title="Show help" onclick="myFunction()"><img
+        src="public/images/help.png"></a>
+        <button onclick="location.href='dominant_genes'">Gene table</button>
+        <button onclick="location.href='dominant_goBP'">GO BP table</button>
+        <button onclick="location.href='dominant_goMF'">GO MF table</button>
+        <button onclick="location.href='dominant_goCC'">GO CC table</button>
+        <button onclick="location.href='dominant_KEGG'">kegg table</button>
+        <button onclick="location.href='dominant_REACTOME'">reactome table</button>
+        <button onclick="location.href='results'" color="red"> Main
+        results</button>
+
+
+</div>
+<script
+src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+ 
+
+
+<hr>
+
+<script>
+var stIsIE = /*@cc_on!@*/false;
+
+sorttable = {
+  init: function() {
+  
+    if (arguments.callee.done) return;
+    // flag this function so we don't do the same thing twice
+    arguments.callee.done = true;
+    // kill the timer
+    if (_timer) clearInterval(_timer);
+
+    if (!document.createElement || !document.getElementsByTagName) return;
+
+    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+
+    forEach(document.getElementsByTagName('table'), function(table) {
+      if (table.className.search(/\bsortable\b/) != -1) {
+        sorttable.makeSortable(table);
+      }
+    });
+
+  },
+
+  makeSortable: function(table) {
+    if (table.getElementsByTagName('thead').length == 0) {
+      // table doesn't have a tHead. Since it should have, create one and
+      // put the first table row in it.
+      the = document.createElement('thead');
+      the.appendChild(table.rows[0]);
+      table.insertBefore(the,table.firstChild);
+    }
+    // Safari doesn't support table.tHead, sigh
+    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
+
+    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
+
+    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
+    // "total" rows, for example). This is B&R, since what you're supposed
+    // to do is put them in a tfoot. So, if there are sortbottom rows,
+    // for backwards compatibility, move them to tfoot (creating it if needed).
+    sortbottomrows = [];
+    for (var i=0; i<table.rows.length; i++) {
+      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
+        sortbottomrows[sortbottomrows.length] = table.rows[i];
+      }
+    }
+    if (sortbottomrows) {
+      if (table.tFoot == null) {
+        // table doesn't have a tfoot. Create one.
+        tfo = document.createElement('tfoot');
+        table.appendChild(tfo);
+      }
+      for (var i=0; i<sortbottomrows.length; i++) {
+        tfo.appendChild(sortbottomrows[i]);
+      }
+      delete sortbottomrows;
+    }
+
+    // work through each column and calculate its type
+    headrow = table.tHead.rows[0].cells;
+    for (var i=0; i<headrow.length; i++) {
+      // manually override the type with a sorttable_type attribute
+      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
+        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+        if (mtch) { override = mtch[1]; }
+	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
+	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
+	      } else {
+	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
+	      }
+	      // make it clickable to sort
+	      headrow[i].sorttable_columnindex = i;
+	      headrow[i].sorttable_tbody = table.tBodies[0];
+	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
+
+          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
+            // if we're already sorted by this column, just
+            // reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted',
+                                                    'sorttable_sorted_reverse');
+            this.removeChild(document.getElementById('sorttable_sortfwdind'));
+            sortrevind = document.createElement('span');
+            sortrevind.id = "sorttable_sortrevind";
+            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+            this.appendChild(sortrevind);
+            return;
+          }
+          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
+            // if we're already sorted by this column in reverse, just
+            // re-reverse the table, which is quicker
+            sorttable.reverse(this.sorttable_tbody);
+            this.className = this.className.replace('sorttable_sorted_reverse',
+                                                    'sorttable_sorted');
+            this.removeChild(document.getElementById('sorttable_sortrevind'));
+            sortfwdind = document.createElement('span');
+            sortfwdind.id = "sorttable_sortfwdind";
+            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+            this.appendChild(sortfwdind);
+            return;
+          }
+
+          // remove sorttable_sorted classes
+          theadrow = this.parentNode;
+          forEach(theadrow.childNodes, function(cell) {
+            if (cell.nodeType == 1) { // an element
+              cell.className = cell.className.replace('sorttable_sorted_reverse','');
+              cell.className = cell.className.replace('sorttable_sorted','');
+            }
+          });
+          sortfwdind = document.getElementById('sorttable_sortfwdind');
+          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
+          sortrevind = document.getElementById('sorttable_sortrevind');
+          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
+
+          this.className += ' sorttable_sorted';
+          sortfwdind = document.createElement('span');
+          sortfwdind.id = "sorttable_sortfwdind";
+          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+          this.appendChild(sortfwdind);
+
+	        // build an array to sort. This is a Schwartzian transform thing,
+	        // i.e., we "decorate" each row with the actual sort key,
+	        // sort based on the sort keys, and then put the rows back in order
+	        // which is a lot faster because you only do getInnerText once per row
+	        row_array = [];
+	        col = this.sorttable_columnindex;
+	        rows = this.sorttable_tbody.rows;
+	        for (var j=0; j<rows.length; j++) {
+	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+	        }
+	        /* If you want a stable sort, uncomment the following line */
+	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+	        /* and comment out this one */
+	        row_array.sort(this.sorttable_sortfunction);
+
+	        tb = this.sorttable_tbody;
+	        for (var j=0; j<row_array.length; j++) {
+	          tb.appendChild(row_array[j][1]);
+	        }
+
+	        delete row_array;
+	      });
+	    }
+    }
+  },
+
+  guessType: function(table, column) {
+    // guess the type of a column based on its first non-blank row
+    sortfn = sorttable.sort_alpha;
+    for (var i=0; i<table.tBodies[0].rows.length; i++) {
+      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
+      if (text != '') {
+        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
+          return sorttable.sort_numeric;
+        }
+        // check for a date: dd/mm/yyyy or dd/mm/yy
+        // can have / or . or - as separator
+        // can be mm/dd as well
+        possdate = text.match(sorttable.DATE_RE)
+        if (possdate) {
+          // looks like a date
+          first = parseInt(possdate[1]);
+          second = parseInt(possdate[2]);
+          if (first > 12) {
+            // definitely dd/mm
+            return sorttable.sort_ddmm;
+          } else if (second > 12) {
+            return sorttable.sort_mmdd;
+          } else {
+            // looks like a date, but we can't tell which, so assume
+            // that it's dd/mm (English imperialism!) and keep looking
+            sortfn = sorttable.sort_ddmm;
+          }
+        }
+      }
+    }
+    return sortfn;
+  },
+
+  getInnerText: function(node) {
+    // gets the text we want to use for sorting for a cell.
+    // strips leading and trailing whitespace.
+    // this is *not* a generic getInnerText function; it's special to sorttable.
+    // for example, you can override the cell text with a customkey attribute.
+    // it also gets .value for <input> fields.
+
+    if (!node) return "";
+
+    hasInputs = (typeof node.getElementsByTagName == 'function') &&
+                 node.getElementsByTagName('input').length;
+
+    if (node.getAttribute("sorttable_customkey") != null) {
+      return node.getAttribute("sorttable_customkey");
+    }
+    else if (typeof node.textContent != 'undefined' && !hasInputs) {
+      return node.textContent.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.innerText != 'undefined' && !hasInputs) {
+      return node.innerText.replace(/^\s+|\s+$/g, '');
+    }
+    else if (typeof node.text != 'undefined' && !hasInputs) {
+      return node.text.replace(/^\s+|\s+$/g, '');
+    }
+    else {
+      switch (node.nodeType) {
+        case 3:
+          if (node.nodeName.toLowerCase() == 'input') {
+            return node.value.replace(/^\s+|\s+$/g, '');
+          }
+        case 4:
+          return node.nodeValue.replace(/^\s+|\s+$/g, '');
+          break;
+        case 1:
+        case 11:
+          var innerText = '';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            innerText += sorttable.getInnerText(node.childNodes[i]);
+          }
+          return innerText.replace(/^\s+|\s+$/g, '');
+          break;
+        default:
+          return '';
+      }
+    }
+  },
+
+  reverse: function(tbody) {
+    // reverse the rows in a tbody
+    newrows = [];
+    for (var i=0; i<tbody.rows.length; i++) {
+      newrows[newrows.length] = tbody.rows[i];
+    }
+    for (var i=newrows.length-1; i>=0; i--) {
+       tbody.appendChild(newrows[i]);
+    }
+    delete newrows;
+  },
+
+  /* sort functions
+     each sort function takes two parameters, a and b
+     you are comparing a[0] and b[0] */
+  sort_numeric: function(a,b) {
+    return (Number(a[0])-Number(b[0]));
+  },
+
+  sort_alpha: function(a,b) {
+    if (a[0]==b[0]) return 0;
+    if (a[0]<b[0]) return -1;
+    return 1;
+  },
+  sort_ddmm: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; m = mtch[2]; d = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+  sort_mmdd: function(a,b) {
+    mtch = a[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt1 = y+m+d;
+    mtch = b[0].match(sorttable.DATE_RE);
+    y = mtch[3]; d = mtch[2]; m = mtch[1];
+    if (m.length == 1) m = '0'+m;
+    if (d.length == 1) d = '0'+d;
+    dt2 = y+m+d;
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+  },
+
+  shaker_sort: function(list, comp_func) {
+    // A stable sort function to allow multi-level sorting of data
+    // see: http://en.wikipedia.org/wiki/Cocktail_sort
+    // thanks to Joseph Nahmias
+    var b = 0;
+    var t = list.length - 1;
+    var swap = true;
+
+    while(swap) {
+        swap = false;
+        for(var i = b; i < t; ++i) {
+            if ( comp_func(list[i], list[i+1]) > 0 ) {
+                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
+                swap = true;
+            }
+        } // for
+        t--;
+
+        if (!swap) break;
+
+        for(var i = t; i > b; --i) {
+            if ( comp_func(list[i], list[i-1]) < 0 ) {
+                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
+                swap = true;
+            }
+        } // for
+        b++;
+
+    } // while(swap)
+  }
+}
+
+/* ******************************************************************
+   Supporting functions: bundled here to avoid depending on a library
+   ****************************************************************** */
+
+// Dean Edwards/Matthias Miller/John Resig
+
+/* for Mozilla/Opera9 */
+if (document.addEventListener) {
+    document.addEventListener("DOMContentLoaded", sorttable.init, false);
+}
+
+/* for Internet Explorer */
+/*@cc_on @*/
+/*@if (@_win32)
+    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
+    var script = document.getElementById("__ie_onload");
+    script.onreadystatechange = function() {
+        if (this.readyState == "complete") {
+            sorttable.init(); // call the onload handler
+        }
+    };
+/*@end @*/
+
+/* for Safari */
+if (/WebKit/i.test(navigator.userAgent)) { // sniff
+    var _timer = setInterval(function() {
+        if (/loaded|complete/.test(document.readyState)) {
+            sorttable.init(); // call the onload handler
+        }
+    }, 10);
+}
+
+/* for other browsers */
+window.onload = sorttable.init;
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function dean_addEvent(element, type, handler) {
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+  this.cancelBubble = true;
+}
+
+// Dean's forEach: http://dean.edwards.name/base/forEach.js
+/*
+	forEach, version 1.0
+	Copyright 2006, Dean Edwards
+	License: http://www.opensource.org/licenses/mit-license.php
+*/
+
+// array-like enumeration
+if (!Array.forEach) { // mozilla already supports this
+	Array.forEach = function(array, block, context) {
+		for (var i = 0; i < array.length; i++) {
+			block.call(context, array[i], i, array);
+		}
+	};
+}
+
+// generic enumeration
+Function.prototype.forEach = function(object, block, context) {
+	for (var key in object) {
+		if (typeof this.prototype[key] == "undefined") {
+			block.call(context, object[key], key, object);
+		}
+	}
+};
+
+// character enumeration
+String.forEach = function(string, block, context) {
+	Array.forEach(string.split(""), function(chr, index) {
+		block.call(context, chr, index, string);
+	});
+};
+
+// globally resolve forEach enumeration
+var forEach = function(object, block, context) {
+	if (object) {
+		var resolve = Object; // default
+		if (object instanceof Function) {
+			// functions have a "length" property
+			resolve = Function;
+		} else if (object.forEach instanceof Function) {
+			// the object implements a custom forEach method so use that
+			object.forEach(block, context);
+			return;
+		} else if (typeof object == "string") {
+			// the object is a string
+			resolve = String;
+		} else if (typeof object.length == "number") {
+			// the object is array-like
+			resolve = Array;
+		}
+		resolve.forEach(object, block, context);
+	}
+};
+</script>
+
+
+
+<style type=text/css>
+	.sortable {
+		padding: 0;
+		margin: 0;
+		border-collapse: collapse;
+		font-size: 0.8em; }
+			.sortable caption {
+				padding-bottom: 0.3em;
+				font-size: 1.5em;
+				text-align: left; }
+			.sortable th {
+				padding: 0.2em;
+				background-color: #4254B2;
+				border: 1px solid #99A8F3;
+				color: #FFF;
+				text-align: left; }
+			.sortable td {
+				padding: 0.2em;
+				background-color: rgba(189, 200, 255, 0.7);
+				border: 1px solid #6295BA; }
+			.sortable tr:hover th[scope=row], .sortable tr:hover td {
+				background-color: #6295BA; }
+			.sortable a {
+				color: #192C8C; }
+	</style>
+<table class="sortable">
+<caption>GO Biological Process Table</caption>
+
+<tr>
+<th scope="col"><p title="Gene ontology identifier">GO ID</p></th> 
+<th scope="col"><p title=" Gene ontology meaning ">GO MEANING</p></th> 
+<th scope="col"><p title=" Genes that have dominant like inheritance pattern
+related to this ontology "> Genes affected </p></th> 
+<th scope="col"><p title=" Total amount of genes in this ontology"> Total genes </p></th>
+
+</tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044700#term=children"> GO:0044700 </a>
+</td><td>single organism signaling</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR KCNAB2 ISG15 MFN2 UTS2 KIF1B ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 23 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>4902</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051093#term=children"> GO:0051093 </a>
+</td><td>negative regulation of developmental process</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>592</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010941#term=children"> GO:0010941 </a>
+</td><td>regulation of cell death</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>1172</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009968#term=children"> GO:0009968 </a>
+</td><td>negative regulation of signal transduction</td><td><div><p title="EPHA2 MFN2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>726</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048385#term=children"> GO:0048385 </a>
+</td><td>regulation of retinoic acid receptor signaling pathway</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>36</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0023051#term=children"> GO:0023051 </a>
+</td><td>regulation of signaling</td><td><div><p title="EPHA2 MTOR MFN2 UTS2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 17 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>2210</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048869#term=children"> GO:0048869 </a>
+</td><td>cellular developmental process</td><td><div><p title="EPHA2 MTOR UTS2 SDF4 PRDM16 PRAMEF1 PRAMEF2 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>3029</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044699#term=children"> GO:0044699 </a>
+</td><td>single-organism process</td><td><div><p title="CLCN6 CLCNKA DFFB EPHA2 MTOR MTHFR PEX14 PLOD1 SCNN1D TNFRSF1B KCNAB2 ISG15 MFN2 MASP2 UTS2 CLSTN1 KIF1B HSPB7 ARHGEF16 SLC45A1 SDF4 AJAP1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 LRRC38 ARHGEF19 C1orf86 NPHP4 KLHL17 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 38 </p>
+</div><div><p title="DFFB SCNN1D ISG15 UTS2 ARHGEF16 SLC45A1 SDF4 PRDM16 PRAMEF1 MIB2 KLHL17 FAM132A PRAMEF13"> 13 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 PRAMEF1 PRAMEF2 LRRC38 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 18 </p>
+</div><td>11008</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009058#term=children"> GO:0009058 </a>
+</td><td>biosynthetic process</td><td><div><p title="MTOR MTHFR PEX14 PGD PLOD1 PER3 UTS2 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 21 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>5319</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044237#term=children"> GO:0044237 </a>
+</td><td>cellular metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 TNFRSF1B PER3 ISG15 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 KLHL17 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 27 </p>
+</div><div><p title="DFFB PER3 ISG15 ARHGEF16 PRDM16 PRAMEF1 NADK KLHL17 FAM132A PRAMEF13"> 10 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 16 </p>
+</div><td>8790</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051253#term=children"> GO:0051253 </a>
+</td><td>negative regulation of RNA metabolic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>880</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:2001141#term=children"> GO:2001141 </a>
+</td><td>regulation of RNA biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>2957</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0007165#term=children"> GO:0007165 </a>
+</td><td>signal transduction</td><td><div><p title="DFFB EPHA2 MTOR ISG15 MFN2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>3983</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008152#term=children"> GO:0008152 </a>
+</td><td>metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 TNFRSF1B PER3 ISG15 MASP2 UTS2 CAMTA1 ARHGEF16 CASZ1 PANK4 CELA2A PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 ARHGEF19 C1orf86 KLHL17 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 31 </p>
+</div><div><p title="DFFB PER3 ISG15 UTS2 ARHGEF16 PRDM16 PRAMEF1 NADK MMEL1 KLHL17 FAM132A PRAMEF13"> 12 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 CELA2A PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>9684</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010646#term=children"> GO:0010646 </a>
+</td><td>regulation of cell communication</td><td><div><p title="EPHA2 MTOR MFN2 UTS2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 17 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>2214</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0007154#term=children"> GO:0007154 </a>
+</td><td>cell communication</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR KCNAB2 ISG15 MFN2 UTS2 KIF1B ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 23 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>4957</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006915#term=children"> GO:0006915 </a>
+</td><td>apoptotic process</td><td><div><p title="DFFB EPHA2 ARHGEF16 PLEKHG5 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1295</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030522#term=children"> GO:0030522 </a>
+</td><td>intracellular receptor signaling pathway</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>226</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010558#term=children"> GO:0010558 </a>
+</td><td>negative regulation of macromolecule biosynthetic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>994</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043170#term=children"> GO:0043170 </a>
+</td><td>macromolecule metabolic process</td><td><div><p title="DFFB MTOR PEX14 PLOD1 TNFRSF1B PER3 ISG15 MASP2 UTS2 CAMTA1 CASZ1 CELA2A PRDM16 PRAMEF1 PRAMEF2 MMEL1 C1orf86 KLHL17 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 23 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 TNFRSF1B CASZ1 CELA2A PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>7531</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008150#term=children"> GO:0008150 </a>
+</td><td>Biological Process</td><td><div><p title="CLCN6 CLCNKA DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 SCNN1D TNFRSF1B KCNAB2 PER3 ISG15 MFN2 MASP2 UTS2 CLSTN1 KIF1B CAMTA1 HSPB7 ARHGEF16 SLC45A1 SDF4 CASZ1 PANK4 AJAP1 PLEKHG5 CELA2A PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 SLC25A33 LRRC38 ARHGEF19 C1orf86 NPHP4 KLHL17 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 47 </p>
+</div><div><p title="DFFB SCNN1D PER3 ISG15 UTS2 ARHGEF16 SLC45A1 SDF4 PRDM16 PRAMEF1 NADK MMEL1 SLC25A33 MIB2 KLHL17 FAM132A PRAMEF13"> 17 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 CASZ1 CELA2A PRAMEF1 PRAMEF2 LRRC38 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 20 </p>
+</div><td>14507</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032502#term=children"> GO:0032502 </a>
+</td><td>developmental process</td><td><div><p title="EPHA2 MTOR PLOD1 MFN2 UTS2 SDF4 PRDM16 PRAMEF1 PRAMEF2 NPHP4 KLHL17 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 17 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>4656</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051716#term=children"> GO:0051716 </a>
+</td><td>cellular response to stimulus</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR TNFRSF1B ISG15 MFN2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 C1orf86 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 22 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR TNFRSF1B DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5326</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010468#term=children"> GO:0010468 </a>
+</td><td>regulation of gene expression</td><td><div><p title="MTOR PEX14 TNFRSF1B PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>3430</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0018130#term=children"> GO:0018130 </a>
+</td><td>heterocycle biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3720</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031326#term=children"> GO:0031326 </a>
+</td><td>regulation of cellular biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3427</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0080090#term=children"> GO:0080090 </a>
+</td><td>regulation of primary metabolic process</td><td><div><p title="EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 CAMTA1 ARHGEF16 CASZ1 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 15 </p>
+</div><td>4479</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044763#term=children"> GO:0044763 </a>
+</td><td>single-organism cellular process</td><td><div><p title="CLCN6 CLCNKA DFFB EPHA2 MTOR PEX14 PLOD1 SCNN1D TNFRSF1B KCNAB2 ISG15 MFN2 UTS2 CLSTN1 KIF1B ARHGEF16 SDF4 AJAP1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 C1orf86 NPHP4 KLHL17 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 33 </p>
+</div><div><p title="DFFB SCNN1D ISG15 UTS2 ARHGEF16 SDF4 PRDM16 PRAMEF1 MIB2 KLHL17 FAM132A PRAMEF13"> 12 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 16 </p>
+</div><td>9949</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901360#term=children"> GO:1901360 </a>
+</td><td>organic cyclic compound metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 22 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5708</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048522#term=children"> GO:0048522 </a>
+</td><td>positive regulation of cellular process</td><td><div><p title="MTOR TNFRSF1B UTS2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR TNFRSF1B PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>3232</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0032774#term=children"> GO:0032774 </a>
+</td><td>RNA biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3360</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031323#term=children"> GO:0031323 </a>
+</td><td>regulation of cellular metabolic process</td><td><div><p title="EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 CAMTA1 ARHGEF16 CASZ1 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 15 </p>
+</div><td>4533</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0023052#term=children"> GO:0023052 </a>
+</td><td>signaling</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR KCNAB2 ISG15 MFN2 UTS2 KIF1B ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 23 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR DHRS3 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>4902</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010605#term=children"> GO:0010605 </a>
+</td><td>negative regulation of macromolecule metabolic process</td><td><div><p title="PEX14 PER3 ISG15 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1432</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016070#term=children"> GO:0016070 </a>
+</td><td>RNA metabolic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3997</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050789#term=children"> GO:0050789 </a>
+</td><td>regulation of biological process</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 MFN2 MASP2 UTS2 CAMTA1 HSPB7 ARHGEF16 CASZ1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 28 </p>
+</div><div><p title="DFFB PER3 ISG15 UTS2 ARHGEF16 PRDM16 PRAMEF1 MIB2 FAM132A PRAMEF13"> 10 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>8402</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048384#term=children"> GO:0048384 </a>
+</td><td>retinoic acid receptor signaling pathway</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>38</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0090304#term=children"> GO:0090304 </a>
+</td><td>nucleic acid metabolic process</td><td><div><p title="DFFB MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 15 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>4543</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006351#term=children"> GO:0006351 </a>
+</td><td>transcription, DNA-dependent</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3087</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048583#term=children"> GO:0048583 </a>
+</td><td>regulation of response to stimulus</td><td><div><p title="EPHA2 MTOR TNFRSF1B MFN2 MASP2 UTS2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR TNFRSF1B PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>2625</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044260#term=children"> GO:0044260 </a>
+</td><td>cellular macromolecule metabolic process</td><td><div><p title="DFFB MTOR PEX14 PLOD1 TNFRSF1B PER3 ISG15 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 C1orf86 KLHL17 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>6818</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019222#term=children"> GO:0019222 </a>
+</td><td>regulation of metabolic process</td><td><div><p title="EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 UTS2 CAMTA1 ARHGEF16 CASZ1 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 20 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 15 </p>
+</div><td>4992</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051172#term=children"> GO:0051172 </a>
+</td><td>negative regulation of nitrogen compound metabolic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>983</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0060548#term=children"> GO:0060548 </a>
+</td><td>negative regulation of cell death</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>656</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901362#term=children"> GO:1901362 </a>
+</td><td>organic cyclic compound biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3835</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:2000112#term=children"> GO:2000112 </a>
+</td><td>regulation of cellular macromolecule biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3202</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050794#term=children"> GO:0050794 </a>
+</td><td>regulation of cellular process</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 MFN2 UTS2 CAMTA1 ARHGEF16 CASZ1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 26 </p>
+</div><div><p title="DFFB PER3 ISG15 UTS2 ARHGEF16 PRDM16 PRAMEF1 MIB2 FAM132A PRAMEF13"> 10 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 16 </p>
+</div><td>7957</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043069#term=children"> GO:0043069 </a>
+</td><td>negative regulation of programmed cell death</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>642</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042127#term=children"> GO:0042127 </a>
+</td><td>regulation of cell proliferation</td><td><div><p title="MTOR MFN2 UTS2 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1134</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0016265#term=children"> GO:0016265 </a>
+</td><td>death</td><td><div><p title="DFFB EPHA2 KIF1B ARHGEF16 PLEKHG5 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 12 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1751</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006725#term=children"> GO:0006725 </a>
+</td><td>cellular aromatic compound metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 22 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5499</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0060255#term=children"> GO:0060255 </a>
+</td><td>regulation of macromolecule metabolic process</td><td><div><p title="MTOR PEX14 TNFRSF1B PER3 ISG15 UTS2 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>4317</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019219#term=children"> GO:0019219 </a>
+</td><td>regulation of nucleobase-containing compound metabolic process</td><td><div><p title="EPHA2 MTOR PEX14 PER3 CAMTA1 ARHGEF16 CASZ1 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>3501</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0043067#term=children"> GO:0043067 </a>
+</td><td>regulation of programmed cell death</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>1137</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031324#term=children"> GO:0031324 </a>
+</td><td>negative regulation of cellular metabolic process</td><td><div><p title="MTOR PEX14 PER3 ISG15 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>1420</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048519#term=children"> GO:0048519 </a>
+</td><td>negative regulation of biological process</td><td><div><p title="EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 MFN2 UTS2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 18 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>3288</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048523#term=children"> GO:0048523 </a>
+</td><td>negative regulation of cellular process</td><td><div><p title="EPHA2 MTOR PEX14 PER3 ISG15 MFN2 UTS2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 17 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>2998</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050896#term=children"> GO:0050896 </a>
+</td><td>response to stimulus</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR PLOD1 TNFRSF1B ISG15 MFN2 MASP2 UTS2 HSPB7 ARHGEF16 SDF4 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 C1orf86 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 27 </p>
+</div><div><p title="DFFB ISG15 UTS2 ARHGEF16 SDF4 PRDM16 PRAMEF1 MIB2 FAM132A PRAMEF13"> 10 </p>
+</div><div><p title="EPHA2 MTOR TNFRSF1B DHRS3 HSPB7 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 15 </p>
+</div><td>6793</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0071704#term=children"> GO:0071704 </a>
+</td><td>organic substance metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 TNFRSF1B PER3 ISG15 MASP2 UTS2 CAMTA1 ARHGEF16 CASZ1 PANK4 CELA2A PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 ARHGEF19 C1orf86 KLHL17 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 31 </p>
+</div><div><p title="DFFB PER3 ISG15 UTS2 ARHGEF16 PRDM16 PRAMEF1 NADK MMEL1 KLHL17 FAM132A PRAMEF13"> 12 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 CELA2A PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>9239</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0030154#term=children"> GO:0030154 </a>
+</td><td>cell differentiation</td><td><div><p title="EPHA2 MTOR UTS2 SDF4 PRDM16 PRAMEF1 PRAMEF2 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>2525</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0023057#term=children"> GO:0023057 </a>
+</td><td>negative regulation of signaling</td><td><div><p title="EPHA2 MFN2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>773</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0046483#term=children"> GO:0046483 </a>
+</td><td>heterocycle metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 22 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5487</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010648#term=children"> GO:0010648 </a>
+</td><td>negative regulation of cell communication</td><td><div><p title="EPHA2 MTOR MFN2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 12 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>777</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0019438#term=children"> GO:0019438 </a>
+</td><td>aromatic compound biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3721</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006139#term=children"> GO:0006139 </a>
+</td><td>nucleobase-containing compound metabolic process</td><td><div><p title="DFFB EPHA2 MTOR PEX14 PGD PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 21 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5311</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009889#term=children"> GO:0009889 </a>
+</td><td>regulation of biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 UTS2 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 15 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3457</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051171#term=children"> GO:0051171 </a>
+</td><td>regulation of nitrogen compound metabolic process</td><td><div><p title="EPHA2 MTOR PEX14 PER3 CAMTA1 ARHGEF16 CASZ1 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>3586</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034641#term=children"> GO:0034641 </a>
+</td><td>cellular nitrogen compound metabolic process</td><td><div><p title="DFFB EPHA2 MTOR PEX14 PGD PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 21 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>5649</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009059#term=children"> GO:0009059 </a>
+</td><td>macromolecule biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 UTS2 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 15 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>4356</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009987#term=children"> GO:0009987 </a>
+</td><td>cellular process</td><td><div><p title="CLCN6 CLCNKA DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 SCNN1D TNFRSF1B KCNAB2 PER3 ISG15 MFN2 UTS2 CLSTN1 KIF1B CAMTA1 ARHGEF16 SDF4 CASZ1 PANK4 AJAP1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 NPHP4 KLHL17 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 40 </p>
+</div><div><p title="DFFB SCNN1D PER3 ISG15 UTS2 ARHGEF16 SDF4 PRDM16 PRAMEF1 NADK MIB2 KLHL17 FAM132A PRAMEF13"> 14 </p>
+</div><div><p title="CLCNKA EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>13209</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009966#term=children"> GO:0009966 </a>
+</td><td>regulation of signal transduction</td><td><div><p title="EPHA2 MTOR MFN2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>1948</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:2000113#term=children"> GO:2000113 </a>
+</td><td>negative regulation of cellular macromolecule biosynthetic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>952</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045595#term=children"> GO:0045595 </a>
+</td><td>regulation of cell differentiation</td><td><div><p title="MTOR UTS2 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1093</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006355#term=children"> GO:0006355 </a>
+</td><td>regulation of transcription, DNA-dependent</td><td><div><p title="MTOR PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>1924</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010629#term=children"> GO:0010629 </a>
+</td><td>negative regulation of gene expression</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>901</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034654#term=children"> GO:0034654 </a>
+</td><td>nucleobase-containing compound biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3653</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0006807#term=children"> GO:0006807 </a>
+</td><td>nitrogen compound metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 PER3 CAMTA1 ARHGEF16 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK ARHGEF19 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 23 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 14 </p>
+</div><td>6073</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008283#term=children"> GO:0008283 </a>
+</td><td>cell proliferation</td><td><div><p title="EPHA2 MTOR MFN2 UTS2 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>1365</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010556#term=children"> GO:0010556 </a>
+</td><td>regulation of macromolecule biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 UTS2 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3284</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0045934#term=children"> GO:0045934 </a>
+</td><td>negative regulation of nucleobase-containing compound metabolic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 10 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>969</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048585#term=children"> GO:0048585 </a>
+</td><td>negative regulation of response to stimulus</td><td><div><p title="EPHA2 MTOR TNFRSF1B MFN2 PRDM16 PRAMEF1 PRAMEF2 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR TNFRSF1B PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>887</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044238#term=children"> GO:0044238 </a>
+</td><td>primary metabolic process</td><td><div><p title="DFFB EPHA2 MTOR MTHFR PEX14 PGD PLOD1 TNFRSF1B PER3 ISG15 MASP2 CAMTA1 ARHGEF16 CASZ1 PANK4 CELA2A PRDM16 PRAMEF1 PRAMEF2 NADK MMEL1 ARHGEF19 C1orf86 KLHL17 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 30 </p>
+</div><div><p title="DFFB PER3 ISG15 ARHGEF16 PRDM16 PRAMEF1 NADK MMEL1 KLHL17 FAM132A PRAMEF13"> 11 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 CASZ1 CELA2A PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>8952</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009892#term=children"> GO:0009892 </a>
+</td><td>negative regulation of metabolic process</td><td><div><p title="MTOR PEX14 PER3 ISG15 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>1542</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0048518#term=children"> GO:0048518 </a>
+</td><td>positive regulation of biological process</td><td><div><p title="EPHA2 MTOR TNFRSF1B MASP2 UTS2 ARHGEF16 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR TNFRSF1B PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3660</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0051252#term=children"> GO:0051252 </a>
+</td><td>regulation of RNA metabolic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 13 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3023</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:1901576#term=children"> GO:1901576 </a>
+</td><td>organic substance biosynthetic process</td><td><div><p title="MTOR MTHFR PEX14 PGD PLOD1 PER3 UTS2 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 21 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>5259</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044249#term=children"> GO:0044249 </a>
+</td><td>cellular biosynthetic process</td><td><div><p title="MTOR MTHFR PEX14 PLOD1 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 19 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>5164</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0009890#term=children"> GO:0009890 </a>
+</td><td>negative regulation of biosynthetic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1053</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0044271#term=children"> GO:0044271 </a>
+</td><td>cellular nitrogen compound biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PANK4 PRDM16 PRAMEF1 PRAMEF2 NADK C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 16 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>3782</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0034645#term=children"> GO:0034645 </a>
+</td><td>cellular macromolecule biosynthetic process</td><td><div><p title="MTOR PEX14 PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 C1orf86 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 12 </p>
+</div><td>4248</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0008219#term=children"> GO:0008219 </a>
+</td><td>cell death</td><td><div><p title="DFFB EPHA2 KIF1B ARHGEF16 PLEKHG5 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 12 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1617</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0010467#term=children"> GO:0010467 </a>
+</td><td>gene expression</td><td><div><p title="MTOR PEX14 TNFRSF1B PER3 CAMTA1 CASZ1 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 14 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="MTOR PEX14 TNFRSF1B CASZ1 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 13 </p>
+</div><td>4455</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0031327#term=children"> GO:0031327 </a>
+</td><td>negative regulation of cellular biosynthetic process</td><td><div><p title="PEX14 PER3 PRDM16 PRAMEF1 PRAMEF2 FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="PEX14 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1040</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0012501#term=children"> GO:0012501 </a>
+</td><td>programmed cell death</td><td><div><p title="DFFB EPHA2 KIF1B ARHGEF16 PLEKHG5 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 12 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 10 </p>
+</div><td>1566</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0050793#term=children"> GO:0050793 </a>
+</td><td>regulation of developmental process</td><td><div><p title="EPHA2 MTOR UTS2 PRDM16 PRAMEF1 PRAMEF2 PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 11 </p>
+</div><div><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><p title="EPHA2 MTOR PRAMEF1 PRAMEF2 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 11 </p>
+</div><td>1550</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0042981#term=children"> GO:0042981 </a>
+</td><td>regulation of apoptotic process</td><td><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </div><div><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/343071">PRAMEF10
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> <a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </div><td>1057</td></td></tr>
+<tr>
+<td><a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0065007#term=children"> GO:0065007 </a>
+</td><td>biological regulation</td><td><div><p title="CLCN6 DFFB EPHA2 MTOR PEX14 TNFRSF1B PER3 ISG15 MFN2 MASP2 UTS2 CAMTA1 HSPB7 ARHGEF16 CASZ1 PLEKHG5 PRDM16 PRAMEF1 PRAMEF2 ARHGEF19 NPHP4 DRAXIN FAM132A PRAMEF12 PRAMEF18 PRAMEF4 PRAMEF11 PRAMEF22"> 28 </p>
+</div><div><p title="DFFB PER3 ISG15 UTS2 ARHGEF16 PRDM16 PRAMEF1 MIB2 FAM132A PRAMEF13"> 10 </p>
+</div><div><p title="EPHA2 MTOR PEX14 TNFRSF1B DHRS3 HSPB7 CASZ1 PRAMEF1 PRAMEF2 ARHGEF19 PRAMEF10 PRAMEF12 PRAMEF17 PRAMEF4 PRAMEF13 PRAMEF11 PRAMEF22"> 17 </p>
+</div><td>8954</td></td></tr>
