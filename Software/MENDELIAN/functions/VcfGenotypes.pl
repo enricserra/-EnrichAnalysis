@@ -43,6 +43,37 @@ sub hasHeterozygousGt#Accepts an array of sample columns, returns 1 if at least 
 
 }
 
+sub hasNonRefHomozygousGt#Accepts an array of sample columns, returns 1 if at least one of them is Heterozygous 0 if they are all Homozygous
+{
+
+  my $gtPosition = tagPositionInFormat("GT",$_[0]);
+  my $i = 1;
+
+  while($i<@_)
+  {
+
+    my @sampleColumn = split(/:/,$_[$i]);
+
+    if($sampleColumn[$gtPosition]=~/\//){$separator = "/";}
+
+    elsif($sampleColumn[$gtPosition]=~/\|/){$separator = "|";}
+
+    else{warn("No genotype provided line $vcfLineNumber\n");}
+
+    my @gt = split(/$separator/,$sampleColumn[$gtPosition]);
+
+    if(($gt[0] eq $gt[1]) and ($gt[0] != 0)){return(1);}
+
+    $i++
+
+  }
+
+  return(0);
+
+}
+
+
+
 sub alleleIsNotFound#Accepts an array of sample columns, returns 1 if at least one of them is Heterozygous 0 if they are all Homozygous
 {
 

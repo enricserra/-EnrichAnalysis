@@ -8,12 +8,7 @@
         %vars_per_gene_case = ();
         %genes_ = ();
         %go_meaning =();
-        #@cases_pos = get_cols_from_samples($cases);@rel_cases_pos  = ();while($i<@cases_pos){push(@rel_cases_pos,($cases_pos[$i]-9));$i++;}
-        #@controls_pos = get_cols_from_samples($controls);@rel_controls_pos  = ();$i=0;while($i<@controls_pos){push(@rel_controls_pos,($controls_pos[$i]-9));$i++;}
-        %gene_number_2_gene_name = load_gene_number_2_gene_name("$genes_path" . "/NCBI2GENE_NAME.txt");
-        %gene_size = load_gene_size($size_path);
-        %clinvar_hash = load_clinvar($clinvar_path);
-        %clinvar5 = load_clinvar_5($clinvar_5_path);
+        @referenceGtValues = (0,".");
 
 #Precomputed values to speed up.
 

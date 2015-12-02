@@ -1,4 +1,6 @@
 $local_path = "/var/www/html/dat.cnag.cat/dat.cnag.cat_preproduction/Software/MENDELIAN";
+$localDirectory  =$local_path;
+
 
 $functions_path = $local_path . "/functions";
 
@@ -14,22 +16,23 @@ $clinvar_path = $ontology_path . "/Clinvar.tsv";
 
 $clinvar_5_path = $ontology_path . "/Clinvar5.tsv";
 
-$coordinates_path{"Exon"} = $local_path . "/COORDINATES/Exon";
-$coordinates_path{"Gene"} = $local_path . "/COORDINATES/Gene";
-$coordinates_path  = $coordinates_path{$coords};
+$coordinatesPath{"Exon"} = $local_path . "/COORDINATES/Exon";
+$coordinatesPath{"Gene"} = $local_path . "/COORDINATES/Gene";
+my $chromosomeNumber = 1;
 
-$size_path{"Exon"} = $local_path . "/COORDINATES/Exon/Gene_size.txt";
-$size_path{"Gene"} = $local_path . "/COORDINATES/Exon/Gene_size.txt";
-$size_path  = $size_path{$coords};
+while($chromosomeNumber < 23 )
+{
+
+  $coordinatesPath{$chromosomeNumber} = $coordinatesPath{$coords} . "/$chromosomeNumber\.txt";
+  $chromosomeNumber ++ ;
+
+}
+
 
 $ontology_path{"Exon"} = $local_path . "/ontologies/Exon";
 $ontology_path{"Gene"} = $local_path . "/ontologies/Gene";
 $ontology_path = $ontology_path{$coords};
 
-$headers_path = $local_path . "/HEADERS";
-
-$fisher_path{"case_control"} = $local_path . "/functions/Pvalue_contingency_table.R";
-$fisher_path{"enrichment"} = $local_path . "/functions/Pvalue_enrichment.R";
 
 $gene2ont_path = $local_path . "/ontologies/GENE2ONT";
 
@@ -39,16 +42,42 @@ $gene2ont_path = $local_path . "/ontologies/GENE2ONT";
 	$gene2ont_path{"KEGG"} = $gene2ont_path . "/Gene2KEGG";
 	$gene2ont_path{"REACTOME"} = $gene2ont_path . "/Gene2REACTOME";
 
+sub getPath2Gene2Ont
+{
+
+  my $analysis = $_[0];
+  return($gene2ont_path . "/Gene2".$analysis);
+
+}
+
+#Change this for nested loops 
+
+sub getPath2Headers
+{
+  
+  my $analysis = $_[0];
+  my $inheritance = $_[1];
+  if($inheritance)
+  {
+  
+    return($localDirectory . "/HEADERS/$inheritance/$analysis\.txt");
+
+  }
+  return($localDirectory . "/HEADERS/$analysis\.txt");
+
+}
 
 
-  $genehead_path = $headers_path . "/GENES.txt";
-  $headers{"KEGG"} = $headers_path . "/KEGG.txt";
-  $headers{"REACTOME"} = $headers_path . "/REACTOME.txt";
-  $headers{"CLINVAR"}  = $headers_path . "/CLINVAR.txt";
-  $headers{"CLINVAR5"}  = $headers_path . "/CLINVAR5.txt";
-  $headers{"GOBP"} = $headers_path . "/GOBP.txt";
-  $headers{"GOMF"} = $headers_path . "/GOMF.txt";
-  $headers{"GOCC"} = $headers_path . "/GOCC.txt";
+sub getPath2Results
+{
+  
+  my $analysis = $_[0];
+  my $inheritance = $_[1];
+  my $baseDirectory = $_[2];
+  return($output_dir . "/$inheritance/$analysis\.ejs");
+
+}
+
 
 
 

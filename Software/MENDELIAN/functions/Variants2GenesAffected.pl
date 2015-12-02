@@ -102,6 +102,7 @@ sub findVariantsInGenes
 sub addToGenes
 {
 
+  chomp($_[1]);
   my $variant = $_[0];my @genelist = split(/,/,$_[1]);
   my @variant = split(/\t/,$variant);
   my $format = $variant[8];
@@ -119,15 +120,20 @@ sub addToGenes
   
       if(hasHeterozygousGt($format, $variant[$casesPositions[$j]]))
       {
+	
+	if( !hasNonRefHomozygousGt($format, @variant[@controlsPositions]))
+	{
 
-        $geneHits{$j}{$genelist[$i]} = $geneHits{$j}{$genelist[$i]} +1;#They get stored, if they are bigger than 1 => double hit, will also be used as keys to all genes found
-        $geneHit{$genelist[$i]} = 1;
+          $geneHits{$j}{$genelist[$i]} = $geneHits{$j}{$genelist[$i]} +1;#They get stored, if they are bigger than 1 => double hit, will also be used as keys to all genes found
+          $geneHit{$genelist[$i]} = 1;
         
-        if($doubleHitFlag == 0)
-        {
+          if($doubleHitFlag == 0)
+          {
 
-          $doubleHitVariants{$genelist[$i]} = $doubleHitVariants{$genelist[$i]} . $variant . "\n"; #Don't need to change, only keys that are true for Dhit will be used as variants
-          $doubleHitFlag ++;
+            $doubleHitVariants{$genelist[$i]} = $doubleHitVariants{$genelist[$i]} . $variant . "\n"; #Don't need to change, only keys that are true for Dhit will be used as variants
+            $doubleHitFlag ++;
+ 
+          }
 
         }
  

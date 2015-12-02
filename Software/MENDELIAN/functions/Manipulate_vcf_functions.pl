@@ -14,7 +14,7 @@ sub create_header_hash
         {my $header = $_[0]; chomp($header);my @header=split(/\t/,$header);my $i=0;my %header_hash=();while($i<@header){$header_hash{$header[$i]}=$i;$i++;}return(%header_hash);}
 
 sub get_cols_from_samples
-	{my @samples= split(/,/,$_[0]);my @nums = ();my $i=0;while($i<@samples){$nums[$i] = $header_hash{$samples[$i]};$i++;}return(@nums);}
+	{my @samples = @_;my @nums = ();my $i=0;while($i<@samples){$nums[$i] = $header_hash{$samples[$i]};$i++;}return(@nums);}
 
 
 
