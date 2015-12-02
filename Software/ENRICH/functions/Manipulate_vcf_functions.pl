@@ -20,60 +20,52 @@ sub get_cols_from_samples
 
 
 sub split_gt_using_separator
-{
-  my $gt = $_[0];
-  if($gt=~/\//){@gt=split(/\//,$gt);}
-  elsif($gt=~/\|/){@gt=split(/\|/,$gt);}
-  return(@gt);
-  
-}
+	{my $gt = $_[0];if($gt=~/\//){@gt=split(/\//,$gt);}elsif($gt=~/\|/){@gt=split(/\|/,$gt);}return(@gt);}
 
 #I : GT_string,and maybe array of columns to return [gt_string,colnum,colnum...]
 #O : Returns integer of counts from the columns passes as array
-sub gt2counts
+sub gt_list2counts
+	{my @gt = @_;my $counts=0;my $i = 0;while($i<@gt){$counts =  gt2count($gt[$i]) + $counts;$i++;}return($counts);}
+
+sub gt2count
+	{my @gt=split_gt_using_separator($_[0]);my $counts = 0;my $i=0;while($i<@gt){if($gt[$i] != "0" and $gt[$i] ne "\."){$counts++;}$i++;}return($counts);}
+
+sub gene2gt_list
+	{my @gene_matched_instance = split(/;/,$genes_matched{$_[0]});my @gt_list=();my @vcf_info=();my $i=0;while($i < @gene_matched_instance){@vcf_info = split(/\t/,$gene_matched_instance[$i]);push(@gt_list,$vcf_info[2]); $i++;}return(@gt_list);}
+
+
+sub count_genotypes 
 {
-#vars
- my @gt = @_;my $counts=0; 
-
- my $i = 0;
- while($i<@gt)
- {
-   $counts =  transform_gt_to_count($gt[$i]) + $counts;
-   $i++;
- }
- return($counts);
-}
-
-sub transform_gt_to_count
-{
-#vars
- my @gt=split_gt_using_separator($_[0]);my $counts = 0;
-
- my $i=0;
- while($i<@gt)
- {
-  if($gt[$i] != "0" and $gt[$i] ne "\.")
-  {
-   $counts++;
-  }
-  $i++;
- }
- return($counts);
-}
-
-sub gene2gt
-{
-#vars
-  my @gene_matched_instance = split(/;/,$genes_matched{$_[0]});
-  my @gt_array=();
-  my @vcf_info=();
-
+  my $gene = $_[0];
+  my $control_counts =0;
+  my $this_list_case_counts= 0;
+  my @gt_array_of_strings = get_gt_list($gene);
   my $i=0;
-  while($i < @gene_matched_instance){
-   @vcf_info = split(/\t/,$gene_matched_instance[$i]);
-   push(@gt_array,$vcf_info[2]); 
-   $i++;}
-  return(@gt_array);  
+  while($i<@gt_array_of_strings)
+  {
+    @this_gts = split(/\s/,$gt_array_of_strings[$i]);
+    $this_list_case_counts =  $this_list_case_counts  + gt_list2counts(select_list_position_by_index(\@this_gts,\@rel_cases_pos));
+    $control_counts = $control_counts + gt_list2counts(select_list_position_by_index(\@this_gts,\@rel_controls_pos));
+    $i++;
+  }
+ return($this_list_case_counts,$control_counts);
+
+}
+
+sub get_gt_list
+{
+  my @gt_list_to_return = ();
+  my $gene = $_[0];
+  my @this_variant = ();
+  my @genes = split(/;/,$gene);
+  my $i=1;
+  while($i < @genes)
+  {
+    @this_variant = split(/\t/,$genes[$i]);
+    push(@gt_list_to_return,$this_variant[2]);
+    $i++;
+  }
+  return(@gt_list_to_return);
 }
 
 1;

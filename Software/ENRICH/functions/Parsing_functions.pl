@@ -46,7 +46,19 @@ sub match_pos_and_gene_and_clinvar
 
 		
 		sub add_to_genes
-				{my $vcf =$_[0];chomp($vcf);my @genelist = split(/,/,$_[1]);chomp(@genelist);my @vcf=split(/\t/,$vcf);my $genotypes = parse_gt(@vcf[8..scalar(@vcf)-1]);my $i=0;while($i<@genelist){my $this_gene = $genelist[$i];if( $genes_matched{$this_gene} ){ $genes_matched{$this_gene} = $genes_matched{$this_gene}.";".$vcf[0]."\t".$vcf[1]."\t".$genotypes;}else{ $genes_matched{$this_gene} = $this_gene.";".$vcf[0]."\t".$vcf[1]."\t".$genotypes;}$i++;}}
+				{
+my $vcf =$_[0];chomp($vcf);my @genelist = split(/,/,$_[1]);chomp(@genelist);
+my @vcf=split(/\t/,$vcf);my $genotypes = parse_gt(@vcf[8..scalar(@vcf)-1]);
+my $i=0;
+while($i<@genelist){
+ $string = $genelist[$i].";".$vcf[0]."\t".$vcf[1]."\t".$genotypes;
+ @case_control_count = count_genotypes($string);
+ if($case_control_count[0]>0){
+  my $this_gene = $genelist[$i];
+  if( $genes_matched{$this_gene} ){ 
+    $genes_matched{$this_gene} = $genes_matched{$this_gene}.";".$vcf[0]."\t".$vcf[1]."\t".$genotypes;
+  }else{
+ $genes_matched{$this_gene} = $this_gene.";".$vcf[0]."\t".$vcf[1]."\t".$genotypes;}}$i++;}}
 
 	sub next_pos
 	        {return(split(/\t/,$this_chr_array[$_[0]]));}

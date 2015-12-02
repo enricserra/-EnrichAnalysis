@@ -48,6 +48,8 @@
   require "$functions_path" . "/Fisher.pl";
   require "$functions_path" . "/Loading_functions.pl";
   require "$functions_path" . "/GOGraph_functions.pl";
+  require "$functions_path" . "/Top_level_functions.pl";
+
   require "$vars_path" . "/variables.pl";
 
 
@@ -68,71 +70,37 @@
 ##            CLINVAR              #
 ##                                 #
 ####################################  
-if($debug){print "CLINVAR\n.\n..\n...\n";}
-  start_html($headers{"CLINVAR5"},"$output_dir/CLINVAR5.ejs");
 
-  my $i=1;
-  while($i<@array_of_chr){
-    match_pos_and_gene_and_clinvar($i,$coords);
-    $i++;
-  }
- 
-  close_html();
+Clinvar_5();
+
+Clinvar();
 
 
-  start_html($headers{"CLINVAR"},"$output_dir/CLINVAR.ejs");
-
-  my $i=0;
-  while($i<@clinvar_found)
-  {
-    clinvar_line_parser($clinvar_found[$i]);
-    $i++;
-  }
-
-  close_html();
-
-if($debug){print "DONE\n";}
 ####################################
 ##                                 #
 ##             GENES               #
 ##                                 #
 ####################################    
-if($debug){print "GENES\n.\n..\n...\n";}
 
 dump_all_genes();
 
-if($debug){print "DONE\n";}
 ####################################
 ##                                 #
 ##              KEGG               #
 ##                                 #
 ####################################    
-if($debug){print "KEGG\n.\n..\n...\n";}
 
-  start_html($headers{"KEGG"},"$output_dir/KEGG.ejs"); 
+KEGG();
 
-#  %KEGG = load_ontology("$ontology_path" . "/KEGG.txt");
-#  analysis_over_ontology(\%KEGG,"KEGG");
 
-  close_html();
-
-if($debug){print "DONE\n";}
 ####################################
 ##                                 #
 ##           REACTOME              #
 ##                                 #
 ####################################    
-if($debug){print "REACTOME\n.\n..\n...\n";}
 
+REACTOME();
 
-  start_html($headers{"REACTOME"},"$output_dir/REACTOME.ejs");
-
-#  %REACTOME = load_ontology("$ontology_path" . "/REACTOME.txt");
-#  analysis_over_ontology(\%REACTOME,"REACTOME");
-
-  close_html();
-
-if($debug){print "DONE\n";}
 ####################################
 ##                                 #
 ##              GO                 #
@@ -142,49 +110,23 @@ if($debug){print "DONE\n";}
 	########
 	# GOBP #
 	########
-	  if($debug){print "GOBP\n.\n..\n...\n";}
 
-  	  start_html($headers{"GOBP"},"$output_dir/GOBP.ejs");
-
-          %GOBP = load_ontology("$ontology_path" . "/GOBP.txt");
-          %GOfound = analysis_over_ontology(\%GOBP,"GOBP");
-
-
-
-          close_html();
-          create_json_nested_graph("BP",$output_dir."/GOBP.json");
-
-
-	  if($debug){print "DONE\n";}
+	GOBP();
 
 	########
 	# GOMF #
 	########
-          if($debug){print "GOMF\n.\n..\n...\n";}
 
-	  start_html($headers{"GOMF"},"$output_dir/GOMF.ejs");
+	GOMF();
 
-	  %GOMF = load_ontology("$ontology_path" . "/GOMF.txt");
-	  %GOfound = analysis_over_ontology(\%GOMF,"GOMF");
-	  close_html();
-          create_json_nested_graph("MF",$output_dir."/GOMF.json");
-
-          if($debug){print "DONE\n";}
 
 	########
 	# GOCC #
 	########
-          if($debug){print "GOCC\n.\n..\n...\n";}
 
-	  start_html($headers{"GOCC"},"$output_dir/GOCC.ejs");
+	GOCC();
 
-	  %GOCC = load_ontology("$ontology_path" . "/GOCC.txt");
-	  %GOfound = analysis_over_ontology(\%GOCC,"GOCC");
 
-	  close_html();
-          create_json_nested_graph("CC", $output_dir."/GOCC.json");
-
-          if($debug){print "DONE\n";}
 
 sub usage
 {

@@ -36,10 +36,10 @@ while(my $map = <MAP>)
 
 sub add_child_recursively
 {
- my $term= $_[0];
+ my $term= $_[0]; my $meaning  = $go_meaning{$term};
  if($children{$term}){
  $color = generate_colors_from_pvals($GOfound{$term});
- print OUT "{\"name\":\"meaning\",\"title\":\" $term P.VAL = $GOfound{$term}\",\"color\" : \"$color\",\"children\" :[\n\t";
+ print OUT "{\"name\":\"$meaning\",\"title\":\" $term P.VAL = $GOfound{$term}\",\"color\":\"$color\",\"children\":[";
 
   my @children = split(/;/,$children{$term});
 
@@ -47,11 +47,11 @@ sub add_child_recursively
    while($i<@children)
    { if($i>0 and $i<@children){print OUT ",";}
    add_child_recursively($children[$i]);$i++;}
-   print OUT "]\n";
+   print OUT "]";
  }
  
- else{print OUT "{\"name\":\"$meaning{$term}\",\"title\":\" $term P.VAL = $GOfound{$term}\",\"color\":\"$color\"";}
- print OUT "\}\n";
+ else{print OUT "{\"name\":\"$meaning\",\"title\":\" $term P.VAL = $GOfound{$term}\",\"color\":\"$color\"";}
+ print OUT "\}";
 }
 
 

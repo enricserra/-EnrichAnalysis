@@ -13,7 +13,7 @@ alert("These are the results for the REACTOME analysis, performed over genes tha
 </head>
 <body>
 
- <% include ../../../results_header.ejs %>
+ <% include ../../results_header.ejs %>
 
 
 
@@ -529,10 +529,8 @@ var forEach = function(object, block, context) {
 <th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
 <th scope="col"><p title="Reactome Number, the id used by reactome">Reactome ID</p></th> 
 <th scope="col"><p title="How many variants are found in this Pathway, regarding cases samples">Variants cases</p></th>
-<th scope="col"><p title="How many variants are found in this Pathway, regarding control samples are Mutated in this Pathway">Variants
-controls</p></th> 
+<th scope="col"><p title="How many variants are found in this Pathway, regarding control samples">Variants controls</p></th> 
 <th scope="col"><p title="How many genes are Mutated in this Pathway">Number of affected genes</p></th> 
 <th scope="col"><p title="Total number of genes that are in this Pathway">Total Genes</p></th> 
 <th scope="col"><p title="Biological meaning of this ID">REACTOME ID MEANING</p></th> 
-<th scope="col"><p title="Genes with variants in this Ontology">Genes Affected</p></th> 
 </tr>

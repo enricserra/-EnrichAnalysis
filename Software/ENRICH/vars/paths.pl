@@ -56,7 +56,7 @@ else
   $headers{"KEGG"} = $headers_path . "/KEGGHeadEnrichment.txt";
   $headers{"REACTOME"} = $headers_path . "/REACTOMEHeadEnrichment.txt";
   $headers{"CLINVAR"}  = $headers_path . "/CLINVARHeadEnrichment.txt";
-  $headers{"CLINVAR5"}  = $headers_path . "/CLINVAR5HeadControls.txt";
+  $headers{"CLINVAR5"}  = $headers_path . "/CLINVAR5HeadEnrichment.txt";
   $headers{"GOBP"} = $headers_path . "/GOBPHeadEnrichment.txt";
   $headers{"GOMF"} = $headers_path . "/GOCCHeadEnrichment.txt";
   $headers{"GOCC"} = $headers_path . "/GOCCHeadEnrichment.txt";
