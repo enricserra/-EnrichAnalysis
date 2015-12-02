@@ -99,6 +99,8 @@
 		 "NCBI" => "http://www.ncbi.nlm.nih.gov/",
 		  "Sequence_Ontology" => "http://www.sequenceontology.org/browser/current_svn/term/",
 		 "OMIM_Allelic_Variant" => "http://omim.org/entry/",
+                 "OMIM Allelic Variant" => "http://omim.org/entry/",
+
 	);
  
 1;

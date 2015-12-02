@@ -40,7 +40,7 @@ sub dump_all_genes
 
   my $pval;my $case_counts;my $control_counts;
 
-  start_html($genehead_path,"./$output_dir/GENES.ejs");
+  start_html($genehead_path,"$output_dir/GENES.ejs");
 
     foreach  $gene_matched_key  (keys %genes_matched)
     {
@@ -66,7 +66,12 @@ sub dump_all_genes
         {
           dump_number($control_counts);
         }
-    
+        else
+        {
+          $expected = sprintf("%.2f",($gene_size{$gene_matched_key}/$universe{"Genes"}{$coords})*$total_counts);
+          dump_number($expected);
+
+        }
       end_html_row();
 
     } 

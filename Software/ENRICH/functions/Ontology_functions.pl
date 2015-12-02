@@ -19,16 +19,16 @@ my @genelist = @{$genes_found_ref};
 my $gene_number  = $_[6];
     $kegg_line = $KEGG{$kegg_key};
     @kegg_line = split(/\t/,$kegg_line);
-
+    
     start_html_row();
     dump_number($pval);
     dump_number($corrected);
     dump_kegg_id($kegg_key);
     dump_number($counts);
+    dump_number(sprintf("%.2f",($kegg_line[3]/$universe{"KEGG"}{$coords})*$total_counts));
+
     dump_genelist(@genelist);
     dump_number($kegg_line[2]);
-    $kegg_line = $KEGG{$kegg_key};
-    @kegg_line = split(/\t/,$kegg_line);
   dump_description($kegg_line[4]);
   end_html_row();
 }
@@ -50,7 +50,9 @@ my $counts  = $_[4];
   dump_number($corrected);
   dump_reactome_id($reactome_key);
   dump_number($counts);
-  dump_number($gene_number);
+  dump_number(sprintf("%.2f",($reactome_line[3]/$universe{"REACTOME"}{$coords})*$total_counts));
+
+#  dump_number($gene_number);
   dump_genelist(@genelist);
   dump_number($reactome_line[2]);
   dump_description($reactome_line[4]);
@@ -73,6 +75,8 @@ my $counts  = $_[4];
   dump_number($corrected);
   dump_go_id($gobp_key);
   dump_number($counts);
+  dump_number(sprintf("%.2f",($gobp_line[3]/$universe{"GOBP"}{$coords})*$total_counts));
+
   dump_genelist(@genelist);
   dump_number($gobp_line[2]);
   dump_description($go_meaning{$gobp_key});
@@ -98,6 +102,8 @@ my $counts  = $_[4];
   dump_number($corrected);
   dump_go_id($gomf_key);
   dump_number($counts);
+  dump_number(sprintf("%.2f",($gomf_line[3]/$universe{"GOMF"}{$coords})*$total_counts));
+
   dump_genelist(@genelist);
   dump_number($go_mf_line[2]);  
   dump_description($go_meaning{$gomf_key});
@@ -119,6 +125,7 @@ my $counts  = $_[4];
   dump_number($corrected);
   dump_go_id($gocc_key);
   dump_number($counts);
+  dump_number(sprintf("%.2f",($gocc_line[3]/$universe{"GOCC"}{$coords})*$total_counts));
   dump_number($gene_number);
   dump_genelist(@genelist);
   $gocc_line = $GOCC{$gocc_key};

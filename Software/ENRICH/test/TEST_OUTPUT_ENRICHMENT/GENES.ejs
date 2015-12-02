@@ -1,888 +1,354 @@
-<!DOCTYPE html>
-<html>
-<script>
-function myFunction()
-{
-
-alert("These are the results for the REACTOME analysis, performed over genes that are different from the reference on your vcf file. Columns are sortable, just click on the header and you'll have the whole column sorted.\n\nHeaders and some fields have additional information, when you point to them a small box will appear with additional information.\n\nWe have inserted some links at the top of the document, click on any of them to view that part of the analysis.\n\nCNAG");
-}
-
-</script>
-
-<head>
-</head>
-<body>
-
- <% include ../../results_header.ejs %>
-
-
-
-
-<hr>
-
-<script>
-var stIsIE = /*@cc_on!@*/false;
-
-sorttable = {
-  init: function() {
-  
-    if (arguments.callee.done) return;
-    // flag this function so we don't do the same thing twice
-    arguments.callee.done = true;
-    // kill the timer
-    if (_timer) clearInterval(_timer);
-
-    if (!document.createElement || !document.getElementsByTagName) return;
-
-    sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
-
-    forEach(document.getElementsByTagName('table'), function(table) {
-      if (table.className.search(/\bsortable\b/) != -1) {
-        sorttable.makeSortable(table);
-      }
-    });
-
-  },
-
-  makeSortable: function(table) {
-    if (table.getElementsByTagName('thead').length == 0) {
-      // table doesn't have a tHead. Since it should have, create one and
-      // put the first table row in it.
-      the = document.createElement('thead');
-      the.appendChild(table.rows[0]);
-      table.insertBefore(the,table.firstChild);
-    }
-    // Safari doesn't support table.tHead, sigh
-    if (table.tHead == null) table.tHead = table.getElementsByTagName('thead')[0];
-
-    if (table.tHead.rows.length != 1) return; // can't cope with two header rows
-
-    // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
-    // "total" rows, for example). This is B&R, since what you're supposed
-    // to do is put them in a tfoot. So, if there are sortbottom rows,
-    // for backwards compatibility, move them to tfoot (creating it if needed).
-    sortbottomrows = [];
-    for (var i=0; i<table.rows.length; i++) {
-      if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
-        sortbottomrows[sortbottomrows.length] = table.rows[i];
-      }
-    }
-    if (sortbottomrows) {
-      if (table.tFoot == null) {
-        // table doesn't have a tfoot. Create one.
-        tfo = document.createElement('tfoot');
-        table.appendChild(tfo);
-      }
-      for (var i=0; i<sortbottomrows.length; i++) {
-        tfo.appendChild(sortbottomrows[i]);
-      }
-      delete sortbottomrows;
-    }
-
-    // work through each column and calculate its type
-    headrow = table.tHead.rows[0].cells;
-    for (var i=0; i<headrow.length; i++) {
-      // manually override the type with a sorttable_type attribute
-      if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
-        mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
-        if (mtch) { override = mtch[1]; }
-	      if (mtch && typeof sorttable["sort_"+override] == 'function') {
-	        headrow[i].sorttable_sortfunction = sorttable["sort_"+override];
-	      } else {
-	        headrow[i].sorttable_sortfunction = sorttable.guessType(table,i);
-	      }
-	      // make it clickable to sort
-	      headrow[i].sorttable_columnindex = i;
-	      headrow[i].sorttable_tbody = table.tBodies[0];
-	      dean_addEvent(headrow[i],"click", sorttable.innerSortFunction = function(e) {
-
-          if (this.className.search(/\bsorttable_sorted\b/) != -1) {
-            // if we're already sorted by this column, just
-            // reverse the table, which is quicker
-            sorttable.reverse(this.sorttable_tbody);
-            this.className = this.className.replace('sorttable_sorted',
-                                                    'sorttable_sorted_reverse');
-            this.removeChild(document.getElementById('sorttable_sortfwdind'));
-            sortrevind = document.createElement('span');
-            sortrevind.id = "sorttable_sortrevind";
-            sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
-            this.appendChild(sortrevind);
-            return;
-          }
-          if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
-            // if we're already sorted by this column in reverse, just
-            // re-reverse the table, which is quicker
-            sorttable.reverse(this.sorttable_tbody);
-            this.className = this.className.replace('sorttable_sorted_reverse',
-                                                    'sorttable_sorted');
-            this.removeChild(document.getElementById('sorttable_sortrevind'));
-            sortfwdind = document.createElement('span');
-            sortfwdind.id = "sorttable_sortfwdind";
-            sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
-            this.appendChild(sortfwdind);
-            return;
-          }
-
-          // remove sorttable_sorted classes
-          theadrow = this.parentNode;
-          forEach(theadrow.childNodes, function(cell) {
-            if (cell.nodeType == 1) { // an element
-              cell.className = cell.className.replace('sorttable_sorted_reverse','');
-              cell.className = cell.className.replace('sorttable_sorted','');
-            }
-          });
-          sortfwdind = document.getElementById('sorttable_sortfwdind');
-          if (sortfwdind) { sortfwdind.parentNode.removeChild(sortfwdind); }
-          sortrevind = document.getElementById('sorttable_sortrevind');
-          if (sortrevind) { sortrevind.parentNode.removeChild(sortrevind); }
-
-          this.className += ' sorttable_sorted';
-          sortfwdind = document.createElement('span');
-          sortfwdind.id = "sorttable_sortfwdind";
-          sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
-          this.appendChild(sortfwdind);
-
-	        // build an array to sort. This is a Schwartzian transform thing,
-	        // i.e., we "decorate" each row with the actual sort key,
-	        // sort based on the sort keys, and then put the rows back in order
-	        // which is a lot faster because you only do getInnerText once per row
-	        row_array = [];
-	        col = this.sorttable_columnindex;
-	        rows = this.sorttable_tbody.rows;
-	        for (var j=0; j<rows.length; j++) {
-	          row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
-	        }
-	        /* If you want a stable sort, uncomment the following line */
-	        //sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
-	        /* and comment out this one */
-	        row_array.sort(this.sorttable_sortfunction);
-
-	        tb = this.sorttable_tbody;
-	        for (var j=0; j<row_array.length; j++) {
-	          tb.appendChild(row_array[j][1]);
-	        }
-
-	        delete row_array;
-	      });
-	    }
-    }
-  },
-
-  guessType: function(table, column) {
-    // guess the type of a column based on its first non-blank row
-    sortfn = sorttable.sort_alpha;
-    for (var i=0; i<table.tBodies[0].rows.length; i++) {
-      text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
-      if (text != '') {
-        if (text.match(/^-?[Â£$Â¤]?[\d,.]+%?$/)) {
-          return sorttable.sort_numeric;
-        }
-        // check for a date: dd/mm/yyyy or dd/mm/yy
-        // can have / or . or - as separator
-        // can be mm/dd as well
-        possdate = text.match(sorttable.DATE_RE)
-        if (possdate) {
-          // looks like a date
-          first = parseInt(possdate[1]);
-          second = parseInt(possdate[2]);
-          if (first > 12) {
-            // definitely dd/mm
-            return sorttable.sort_ddmm;
-          } else if (second > 12) {
-            return sorttable.sort_mmdd;
-          } else {
-            // looks like a date, but we can't tell which, so assume
-            // that it's dd/mm (English imperialism!) and keep looking
-            sortfn = sorttable.sort_ddmm;
-          }
-        }
-      }
-    }
-    return sortfn;
-  },
-
-  getInnerText: function(node) {
-    // gets the text we want to use for sorting for a cell.
-    // strips leading and trailing whitespace.
-    // this is *not* a generic getInnerText function; it's special to sorttable.
-    // for example, you can override the cell text with a customkey attribute.
-    // it also gets .value for <input> fields.
-
-    if (!node) return "";
-
-    hasInputs = (typeof node.getElementsByTagName == 'function') &&
-                 node.getElementsByTagName('input').length;
-
-    if (node.getAttribute("sorttable_customkey") != null) {
-      return node.getAttribute("sorttable_customkey");
-    }
-    else if (typeof node.textContent != 'undefined' && !hasInputs) {
-      return node.textContent.replace(/^\s+|\s+$/g, '');
-    }
-    else if (typeof node.innerText != 'undefined' && !hasInputs) {
-      return node.innerText.replace(/^\s+|\s+$/g, '');
-    }
-    else if (typeof node.text != 'undefined' && !hasInputs) {
-      return node.text.replace(/^\s+|\s+$/g, '');
-    }
-    else {
-      switch (node.nodeType) {
-        case 3:
-          if (node.nodeName.toLowerCase() == 'input') {
-            return node.value.replace(/^\s+|\s+$/g, '');
-          }
-        case 4:
-          return node.nodeValue.replace(/^\s+|\s+$/g, '');
-          break;
-        case 1:
-        case 11:
-          var innerText = '';
-          for (var i = 0; i < node.childNodes.length; i++) {
-            innerText += sorttable.getInnerText(node.childNodes[i]);
-          }
-          return innerText.replace(/^\s+|\s+$/g, '');
-          break;
-        default:
-          return '';
-      }
-    }
-  },
-
-  reverse: function(tbody) {
-    // reverse the rows in a tbody
-    newrows = [];
-    for (var i=0; i<tbody.rows.length; i++) {
-      newrows[newrows.length] = tbody.rows[i];
-    }
-    for (var i=newrows.length-1; i>=0; i--) {
-       tbody.appendChild(newrows[i]);
-    }
-    delete newrows;
-  },
-
-  /* sort functions
-     each sort function takes two parameters, a and b
-     you are comparing a[0] and b[0] */
-  sort_numeric: function(a,b) {
-    return (Number(a[0])-Number(b[0]));
-  },
-
-  sort_alpha: function(a,b) {
-    if (a[0]==b[0]) return 0;
-    if (a[0]<b[0]) return -1;
-    return 1;
-  },
-  sort_ddmm: function(a,b) {
-    mtch = a[0].match(sorttable.DATE_RE);
-    y = mtch[3]; m = mtch[2]; d = mtch[1];
-    if (m.length == 1) m = '0'+m;
-    if (d.length == 1) d = '0'+d;
-    dt1 = y+m+d;
-    mtch = b[0].match(sorttable.DATE_RE);
-    y = mtch[3]; m = mtch[2]; d = mtch[1];
-    if (m.length == 1) m = '0'+m;
-    if (d.length == 1) d = '0'+d;
-    dt2 = y+m+d;
-    if (dt1==dt2) return 0;
-    if (dt1<dt2) return -1;
-    return 1;
-  },
-  sort_mmdd: function(a,b) {
-    mtch = a[0].match(sorttable.DATE_RE);
-    y = mtch[3]; d = mtch[2]; m = mtch[1];
-    if (m.length == 1) m = '0'+m;
-    if (d.length == 1) d = '0'+d;
-    dt1 = y+m+d;
-    mtch = b[0].match(sorttable.DATE_RE);
-    y = mtch[3]; d = mtch[2]; m = mtch[1];
-    if (m.length == 1) m = '0'+m;
-    if (d.length == 1) d = '0'+d;
-    dt2 = y+m+d;
-    if (dt1==dt2) return 0;
-    if (dt1<dt2) return -1;
-    return 1;
-  },
-
-  shaker_sort: function(list, comp_func) {
-    // A stable sort function to allow multi-level sorting of data
-    // see: http://en.wikipedia.org/wiki/Cocktail_sort
-    // thanks to Joseph Nahmias
-    var b = 0;
-    var t = list.length - 1;
-    var swap = true;
-
-    while(swap) {
-        swap = false;
-        for(var i = b; i < t; ++i) {
-            if ( comp_func(list[i], list[i+1]) > 0 ) {
-                var q = list[i]; list[i] = list[i+1]; list[i+1] = q;
-                swap = true;
-            }
-        } // for
-        t--;
-
-        if (!swap) break;
-
-        for(var i = t; i > b; --i) {
-            if ( comp_func(list[i], list[i-1]) < 0 ) {
-                var q = list[i]; list[i] = list[i-1]; list[i-1] = q;
-                swap = true;
-            }
-        } // for
-        b++;
-
-    } // while(swap)
-  }
-}
-
-/* ******************************************************************
-   Supporting functions: bundled here to avoid depending on a library
-   ****************************************************************** */
-
-// Dean Edwards/Matthias Miller/John Resig
-
-/* for Mozilla/Opera9 */
-if (document.addEventListener) {
-    document.addEventListener("DOMContentLoaded", sorttable.init, false);
-}
-
-/* for Internet Explorer */
-/*@cc_on @*/
-/*@if (@_win32)
-    document.write("<script id=__ie_onload defer src=javascript:void(0)><\/script>");
-    var script = document.getElementById("__ie_onload");
-    script.onreadystatechange = function() {
-        if (this.readyState == "complete") {
-            sorttable.init(); // call the onload handler
-        }
-    };
-/*@end @*/
-
-/* for Safari */
-if (/WebKit/i.test(navigator.userAgent)) { // sniff
-    var _timer = setInterval(function() {
-        if (/loaded|complete/.test(document.readyState)) {
-            sorttable.init(); // call the onload handler
-        }
-    }, 10);
-}
-
-/* for other browsers */
-window.onload = sorttable.init;
-
-// written by Dean Edwards, 2005
-// with input from Tino Zijdel, Matthias Miller, Diego Perini
-
-// http://dean.edwards.name/weblog/2005/10/add-event/
-
-function dean_addEvent(element, type, handler) {
-	if (element.addEventListener) {
-		element.addEventListener(type, handler, false);
-	} else {
-		// assign each event handler a unique ID
-		if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
-		// create a hash table of event types for the element
-		if (!element.events) element.events = {};
-		// create a hash table of event handlers for each element/event pair
-		var handlers = element.events[type];
-		if (!handlers) {
-			handlers = element.events[type] = {};
-			// store the existing event handler (if there is one)
-			if (element["on" + type]) {
-				handlers[0] = element["on" + type];
-			}
-		}
-		// store the event handler in the hash table
-		handlers[handler.$$guid] = handler;
-		// assign a global event handler to do all the work
-		element["on" + type] = handleEvent;
-	}
-};
-// a counter used to create unique IDs
-dean_addEvent.guid = 1;
-
-function removeEvent(element, type, handler) {
-	if (element.removeEventListener) {
-		element.removeEventListener(type, handler, false);
-	} else {
-		// delete the event handler from the hash table
-		if (element.events && element.events[type]) {
-			delete element.events[type][handler.$$guid];
-		}
-	}
-};
-
-function handleEvent(event) {
-	var returnValue = true;
-	// grab the event object (IE uses a global event object)
-	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
-	// get a reference to the hash table of event handlers
-	var handlers = this.events[event.type];
-	// execute each event handler
-	for (var i in handlers) {
-		this.$$handleEvent = handlers[i];
-		if (this.$$handleEvent(event) === false) {
-			returnValue = false;
-		}
-	}
-	return returnValue;
-};
-
-function fixEvent(event) {
-	// add W3C standard event methods
-	event.preventDefault = fixEvent.preventDefault;
-	event.stopPropagation = fixEvent.stopPropagation;
-	return event;
-};
-fixEvent.preventDefault = function() {
-	this.returnValue = false;
-};
-fixEvent.stopPropagation = function() {
-  this.cancelBubble = true;
-}
-
-// Dean's forEach: http://dean.edwards.name/base/forEach.js
-/*
-	forEach, version 1.0
-	Copyright 2006, Dean Edwards
-	License: http://www.opensource.org/licenses/mit-license.php
-*/
-
-// array-like enumeration
-if (!Array.forEach) { // mozilla already supports this
-	Array.forEach = function(array, block, context) {
-		for (var i = 0; i < array.length; i++) {
-			block.call(context, array[i], i, array);
-		}
-	};
-}
-
-// generic enumeration
-Function.prototype.forEach = function(object, block, context) {
-	for (var key in object) {
-		if (typeof this.prototype[key] == "undefined") {
-			block.call(context, object[key], key, object);
-		}
-	}
-};
-
-// character enumeration
-String.forEach = function(string, block, context) {
-	Array.forEach(string.split(""), function(chr, index) {
-		block.call(context, chr, index, string);
-	});
-};
-
-// globally resolve forEach enumeration
-var forEach = function(object, block, context) {
-	if (object) {
-		var resolve = Object; // default
-		if (object instanceof Function) {
-			// functions have a "length" property
-			resolve = Function;
-		} else if (object.forEach instanceof Function) {
-			// the object implements a custom forEach method so use that
-			object.forEach(block, context);
-			return;
-		} else if (typeof object == "string") {
-			// the object is a string
-			resolve = String;
-		} else if (typeof object.length == "number") {
-			// the object is array-like
-			resolve = Array;
-		}
-		resolve.forEach(object, block, context);
-	}
-};
-</script>
-
-
-<style type=text/css>
-	.sortable {
-		padding: 0;
-		margin: 0;
-		border-collapse: collapse;
-		font-size: 0.8em; }
-			.sortable caption {
-				padding-bottom: 0.3em;
-				font-size: 1.5em;
-				text-align: left; }
-			.sortable th {
-				padding: 0.2em;
-				background-color: #B29A12;
-				border: 1px solid #DED18A;
-				color: #FFF;
-				text-align: left; }
-			.sortable td {
-				padding: 0.2em;
-				background-color: rgba(255, 237, 140, 0.7);
-				border: 1px solid #CCBA52; }
-			.sortable tr:hover th[scope=row], .sortable tr:hover td {
-				background-color: #CCBA52; }
-			.sortable a {
-				color: #584D0D; }
-	</style>
-<table class="sortable">
-<caption>Reactome Table</caption>
-<tr>
-<th scope="col"><p title="P.value obtained from the hypergeometric test.">P.value</p></th> 
-<th scope="col"><p title="Pvalue Corrected ">P.adjusted</p></th> 
-<th scope="col"><p title="Gene Name">Gene Name</p></th> 
-<th scope="col"><p title="How many positions are Mutated in this Gene CASES">CASES Counts</p></th> 
-<th scope="col"><p title="How many positions are Mutated in this Gene CONTROLS">Control Counts</p></th> 
-</tr>
-
-<tr>
-<td >0.407469262652578</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.407602897847538</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.440869175169986</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/85452">KIAA1751
-</a> </td><td >4</td><td >6</td></tr>
-<tr>
-<td >0.111137242266802</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.457199017738075</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
-</a> </td><td >7</td><td >12</td></tr>
-<tr>
-<td >0.660890938986604</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
-</a> </td><td >5</td><td >11</td></tr>
-<tr>
-<td >0.319652041231976</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
-</a> </td><td >3</td><td >3</td></tr>
-<tr>
-<td >0.39207536300312</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/348487">FAM131C
-</a> </td><td >7</td><td >11</td></tr>
-<tr>
-<td >0.648895898431984</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/943">TNFRSF8
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.539280541218084</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.111162431320494</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.407794390915317</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.111217533713053</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/374946">DRAXIN
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.407810172076596</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/100526739">APITD1-CORT
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.868312791159476</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
-</a> </td><td >1</td><td >4</td></tr>
-<tr>
-<td >0.429476251347011</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
-</a> </td><td >3</td><td >4</td></tr>
-<tr>
-<td >0.531949433560827</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
-</a> </td><td >3</td><td >5</td></tr>
-<tr>
-<td >0.149697891897477</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
-</a> </td><td >7</td><td >7</td></tr>
-<tr>
-<td >0.648887722322883</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.259573517144521</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54991">C1orf159
-</a> </td><td >2</td><td >1</td></tr>
-<tr>
-<td >0.210002560607738</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/148870">CCDC27
-</a> </td><td >3</td><td >2</td></tr>
-<tr>
-<td >0.599596737780417</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
-</a> </td><td >14</td><td >29</td></tr>
-<tr>
-<td >0.0453543246236463</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
-</a> </td><td >4</td><td >1</td></tr>
-<tr>
-<td >0.333410645931812</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.703732590620919</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
-</a> </td><td >1</td><td >2</td></tr>
-<tr>
-<td >0.177915663184183</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
-</a> </td><td >6</td><td >6</td></tr>
-<tr>
-<td >0.429453852124707</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
-</a> </td><td >3</td><td >4</td></tr>
-<tr>
-<td >0.660915563541285</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
-</a> </td><td >5</td><td >11</td></tr>
-<tr>
-<td >0.555694050123837</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.429509097072795</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
-</a> </td><td >3</td><td >4</td></tr>
-<tr>
-<td >0.333435348123106</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.0425660036021921</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
-</a> </td><td >6</td><td >3</td></tr>
-<tr>
-<td >0.0920140010395522</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1953">MEGF6
-</a> </td><td >10</td><td >10</td></tr>
-<tr>
-<td >0.539163279789978</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.555632222092448</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.333423581967494</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.804907825290015</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
-</a> </td><td >2</td><td >6</td></tr>
-<tr>
-<td >0.460260343163688</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
-</a> </td><td >8</td><td >14</td></tr>
-<tr>
-<td >0.333371291914038</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.524619110700803</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
-</a> </td><td >5</td><td >9</td></tr>
-<tr>
-<td >0.86831276383302</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84069">PLEKHN1
-</a> </td><td >1</td><td >4</td></tr>
-<tr>
-<td >0.648930668039866</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.804907876749213</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
-</a> </td><td >2</td><td >6</td></tr>
-<tr>
-<td >0.333388635419651</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.531827352374943</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/114827">FHAD1
-</a> </td><td >3</td><td >5</td></tr>
-<tr>
-<td >0.55560196248999</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.539151129267335</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.539301312108126</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9906">SLC35E2
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.868312769355801</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
-</a> </td><td >1</td><td >4</td></tr>
-<tr>
-<td >0.555608458631611</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.648876996199051</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.703745760713335</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
-</a> </td><td >1</td><td >2</td></tr>
-<tr>
-<td >0.333539412674094</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.407422487865652</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55187">VPS13D
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.606977359744242</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
-</a> </td><td >4</td><td >8</td></tr>
-<tr>
-<td >0.407445325247517</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.259419139025751</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/60672">MIIP
-</a> </td><td >2</td><td >1</td></tr>
-<tr>
-<td >0.555671383427032</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.703758562101524</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
-</a> </td><td >1</td><td >2</td></tr>
-<tr>
-<td >0.259555423932729</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339456">TMEM52
-</a> </td><td >2</td><td >1</td></tr>
-<tr>
-<td >0.407626536159674</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.407570597057082</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728661">SLC35E2B
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.539389377151569</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/390992">HES3
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.555681349632878</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/126755">LRRC38
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >8.37822297266033e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
-</a> </td><td >17</td><td >6</td></tr>
-<tr>
-<td >0.320378904111185</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/200197">TMEM51-AS1
-</a> </td><td >3</td><td >3</td></tr>
-<tr>
-<td >0.407626051050285</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.33339174625678</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/90231">KIAA2013
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.898305302911403</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
-</a> </td><td >4</td><td >14</td></tr>
-<tr>
-<td >0.555607348910395</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54455">FBXO42
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.407531528442987</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.648924679600635</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.11118924525422</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/654348">PRAMEF16
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.429538218263209</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/374955">SPATA21
-</a> </td><td >3</td><td >4</td></tr>
-<tr>
-<td >0.258773400559132</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
-</a> </td><td >4</td><td >4</td></tr>
-<tr>
-<td >0.333367699415671</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.407581683333454</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/140625">ACTRT2
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.555663821675195</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388595">TMEM82
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.407667166921686</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55092">TMEM51
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.333443983413971</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80045">GPR157
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.539326000682674</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.111335552785068</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.648931526795538</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.333355559287497</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23261">CAMTA1
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.802487569490761</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54973">CPSF3L
-</a> </td><td >1</td><td >3</td></tr>
-<tr>
-<td >0.407830895875211</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.31966800459731</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54897">CASZ1
-</a> </td><td >3</td><td >3</td></tr>
-<tr>
-<td >0.802513567175169</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57801">HES4
-</a> </td><td >1</td><td >3</td></tr>
-<tr>
-<td >0.522932636590868</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79854">LINC00115
-</a> </td><td >6</td><td >11</td></tr>
-<tr>
-<td >0.64888999598442</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.648862219371155</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.539165678513201</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
-</a> </td><td >2</td><td >3</td></tr>
-<tr>
-<td >0.174169115533879</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
-</a> </td><td >17</td><td >24</td></tr>
-<tr>
-<td >0.000154501531629991</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/343069">HNRNPCL1
-</a> </td><td >8</td><td >0</td></tr>
-<tr>
-<td >0.648877558892871</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.555600571185435</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >7.4877144317087e-06</td><td >0.141487851901568</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
-</a> </td><td >16</td><td >3</td></tr>
-<tr>
-<td >0.531885508495866</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
-</a> </td><td >3</td><td >5</td></tr>
-<tr>
-<td >0.587841806229395</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
-</a> </td><td >6</td><td >12</td></tr>
-<tr>
-<td >0.649004569105898</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
-</a> </td><td >2</td><td >4</td></tr>
-<tr>
-<td >0.555779444516202</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.333382559249067</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
-</a> </td><td >1</td><td >0</td></tr>
-<tr>
-<td >0.622850907207981</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
-</a> </td><td >3</td><td >6</td></tr>
-<tr>
-<td >0.703734928589785</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
-</a> </td><td >1</td><td >2</td></tr>
-<tr>
-<td >0.111188322262034</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.407550916190455</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.555582269586821</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
-</a> </td><td >1</td><td >1</td></tr>
-<tr>
-<td >0.407553679173008</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
-</a> </td><td >2</td><td >2</td></tr>
-<tr>
-<td >0.440901859708196</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/387509">GPR153
-</a> </td><td >4</td><td >6</td></tr>
-<tr>
-<td >0.622834161155687</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
-</a> </td><td >3</td><td >6</td></tr>
-<tr>
-<td >0.802500431528867</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
-</a> </td><td >1</td><td >3</td></tr>
-<tr>
-<td >0.802525803876532</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/93190">C1orf158
-</a> </td><td >1</td><td >3</td></tr>
-<tr>
-<td >0.177846586685565</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
-</a> </td><td >6</td><td >6</td></tr>
-<tr>
-<td >0.111127569365567</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
-</a> </td><td >2</td><td >0</td></tr>
-<tr>
-<td >0.818827189587394</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/126767">AADACL3
-</a> </td><td >3</td><td >9</td></tr>
-<tr>
-<td >0.100302183303637</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
-</a> </td><td >4</td><td >2</td></tr>
-<tr>
-<td >0.173441530807516</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
-</a> </td><td >4</td><td >3</td></tr>
-<tr>
-<td >0.25946247412426</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339457">C1orf222
-</a> </td><td >2</td><td >1</td></tr>
+<tr>
+<td >0.000576024880465487</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/142678">MIB2
+</a> </td><td >2</td></tr>
+<tr>
+<td >5.85383422083696e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1677">DFFB
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.43877925129487e-08</td><td >0.00027187172732468</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/85452">KIAA1751
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.00101381330366324</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/261734">NPHP4
+</a> </td><td >2</td></tr>
+<tr>
+<td >6.10622663543836e-15</td><td >1.15383258503243e-10</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/653606">PRAMEF22
+</a> </td><td >7</td></tr>
+<tr>
+<td >9.39443822733921e-09</td><td >0.000177517304743802</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/375790">AGRN
+</a> </td><td >5</td></tr>
+<tr>
+<td >8.49809488834286e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2475">MTOR
+</a> </td><td >3</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/348487">FAM131C
+</a> </td><td >7</td></tr>
+<tr>
+<td >0.000179412597618667</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/943">TNFRSF8
+</a> </td><td >2</td></tr>
+<tr>
+<td >4.49853761906871e-05</td><td >0.850043668499223</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26232">FBXO2
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.000266770783349912</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5351">PLOD1
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.49791390018361e-05</td><td >0.283045810578695</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27129">HSPB7
+</a> </td><td >2</td></tr>
+<tr>
+<td >6.25307119257457e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/374946">DRAXIN
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.38293136079382e-05</td><td >0.261318709935599</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/100526739">APITD1-CORT
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.00879018484635719</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80176">SPSB1
+</a> </td><td >1</td></tr>
+<tr>
+<td >1.9214355096997e-06</td><td >0.0363074453912855</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/27237">ARHGEF16
+</a> </td><td >3</td></tr>
+<tr>
+<td >3.52145605342358e-07</td><td >0.00665414335854919</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51150">SDF4
+</a> </td><td >3</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1187">CLCNKA
+</a> </td><td >7</td></tr>
+<tr>
+<td >0.000237758836507562</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7161">TP73
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.99678970146389e-05</td><td >0.377313381988616</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54991">C1orf159
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.52660781149727e-06</td><td >0.0288467812060524</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/148870">CCDC27
+</a> </td><td >3</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1188">CLCNKB
+</a> </td><td >14</td></tr>
+<tr>
+<td >2.22381912884373e-09</td><td >4.20212862586311e-05</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/391004">PRAMEF17
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.0153534267629213</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/391003">PRAMEF18
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0272300467045844</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23254">KAZN
+</a> </td><td >1</td></tr>
+<tr>
+<td >2.89435142519778e-13</td><td >5.46916645305373e-09</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55229">PANK4
+</a> </td><td >6</td></tr>
+<tr>
+<td >3.53854018841915e-06</td><td >0.0668642554003682</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1185">CLCN6
+</a> </td><td >3</td></tr>
+<tr>
+<td >6.35200780862988e-11</td><td >1.2002753955187e-06</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26155">NOC2L
+</a> </td><td >5</td></tr>
+<tr>
+<td >0.00859805915425971</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63036">CELA2A
+</a> </td><td >1</td></tr>
+<tr>
+<td >9.37797291600262e-07</td><td >0.0177206176220785</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55735">DNAJC11
+</a> </td><td >3</td></tr>
+<tr>
+<td >0.0116569772163624</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8514">KCNAB2
+</a> </td><td >1</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/440560">PRAMEF11
+</a> </td><td >6</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1953">MEGF6
+</a> </td><td >10</td></tr>
+<tr>
+<td >0.000326738284548322</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7709">ZBTB17
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0154806443618781</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/390999">PRAMEF12
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0131669668278876</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55966">AJAP1
+</a> </td><td >1</td></tr>
+<tr>
+<td >8.83735776616712e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/842">CASP9
+</a> </td><td >2</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/400736">PRAMEF13
+</a> </td><td >8</td></tr>
+<tr>
+<td >0.0310249364488259</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/22883">CLSTN1
+</a> </td><td >1</td></tr>
+<tr>
+<td >6.46470654785958e-11</td><td >1.22157094928355e-06</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/50651">SLC45A1
+</a> </td><td >5</td></tr>
+<tr>
+<td >0.019785749869435</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84069">PLEKHN1
+</a> </td><td >1</td></tr>
+<tr>
+<td >7.38588078590396e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/118424">UBE2J2
+</a> </td><td >2</td></tr>
+<tr>
+<td >3.69649938315453e-05</td><td >0.69849052344088</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/51032">CELA2B
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0213992717893973</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199953">TMEM201
+</a> </td><td >1</td></tr>
+<tr>
+<td >1.48713199359385e-05</td><td >0.281008461509494</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/114827">FHAD1
+</a> </td><td >3</td></tr>
+<tr>
+<td >0.0254477336829537</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/128272">ARHGEF19
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.000480712058187893</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1969">EPHA2
+</a> </td><td >2</td></tr>
+<tr>
+<td >3.64155289195311e-05</td><td >0.688107834463461</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9906">SLC35E2
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0146534369011048</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/49856">WRAP73
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0223576918682445</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/6339">SCNN1D
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.000369933685095414</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/83756">TAS1R3
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0187825551569532</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5590">PRKCZ
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0057866505491927</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/199990">C1orf86
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.00903586597462058</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55187">VPS13D
+</a> </td><td >2</td></tr>
+<tr>
+<td >4.66602794180204e-08</td><td >0.000881692639882914</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1855">DVL1
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.00151121417268074</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7799">PRDM2
+</a> </td><td >2</td></tr>
+<tr>
+<td >7.6869926745271e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/60672">MIIP
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0102725723332729</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/84275">SLC25A33
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0144306088092139</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54751">FBLIM1
+</a> </td><td >1</td></tr>
+<tr>
+<td >2.24776157853324e-05</td><td >0.42473702787964</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339456">TMEM52
+</a> </td><td >2</td></tr>
+<tr>
+<td >4.66213495122769e-05</td><td >0.880957020383985</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388581">FAM132A
+</a> </td><td >2</td></tr>
+<tr>
+<td >8.38975098104155e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728661">SLC35E2B
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.79252895486925e-05</td><td >0.338716271312094</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/390992">HES3
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.00946233244089989</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/126755">LRRC38
+</a> </td><td >1</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/400735">PRAMEF4
+</a> </td><td >17</td></tr>
+<tr>
+<td >9.51627698864144e-09</td><td >0.000179819569977369</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/200197">TMEM51-AS1
+</a> </td><td >3</td></tr>
+<tr>
+<td >4.6827887308809e-05</td><td >0.884859758587256</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9249">DHRS3
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0202711397306795</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/90231">KIAA2013
+</a> </td><td >1</td></tr>
+<tr>
+<td >6.02735777843755e-07</td><td >0.0113892952581356</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/26038">CHD5
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.0228312899355652</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54455">FBXO42
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0001446568960487</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/219293">ATAD3C
+</a> </td><td >2</td></tr>
+<tr>
+<td >8.38975098104155e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5192">PEX10
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.000115696744388827</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/654348">PRAMEF16
+</a> </td><td >2</td></tr>
+<tr>
+<td >5.58499638758647e-07</td><td >0.0105534091739834</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/374955">SPATA21
+</a> </td><td >3</td></tr>
+<tr>
+<td >3.10681554926973e-08</td><td >0.000587063866190007</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9731">CEP104
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.0342124646768575</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57449">PLEKHG5
+</a> </td><td >1</td></tr>
+<tr>
+<td >7.35997914171893e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/140625">ACTRT2
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0109863146229838</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/388595">TMEM82
+</a> </td><td >1</td></tr>
+<tr>
+<td >3.32046712860912e-05</td><td >0.627435468621979</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/55092">TMEM51
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0107520080978171</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80045">GPR157
+</a> </td><td >1</td></tr>
+<tr>
+<td >2.90712021249195e-05</td><td >0.54932943535248</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10630">PDPN
+</a> </td><td >2</td></tr>
+<tr>
+<td >1.41124810364435e-05</td><td >0.266669441664636</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10911">UTS2
+</a> </td><td >2</td></tr>
+<tr>
+<td >7.25682385926962e-05</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5195">PEX14
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0524052173357216</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23261">CAMTA1
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0190466529836095</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54973">CPSF3L
+</a> </td><td >1</td></tr>
+<tr>
+<td >1.25099236956139e-05</td><td >0.23638751815232</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/1325">CORT
+</a> </td><td >2</td></tr>
+<tr>
+<td >2.88794410742144e-05</td><td >0.545705918538355</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/54897">CASZ1
+</a> </td><td >3</td></tr>
+<tr>
+<td >0.00794669033237394</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57801">HES4
+</a> </td><td >1</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79854">LINC00115
+</a> </td><td >6</td></tr>
+<tr>
+<td >0.000218962076632967</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/4524">MTHFR
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.000851155588910024</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/63976">PRDM16
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.000305213890664402</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79258">MMEL1
+</a> </td><td >2</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65121">PRAMEF1
+</a> </td><td >17</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/343069">HNRNPCL1
+</a> </td><td >8</td></tr>
+<tr>
+<td >0.000360516706438663</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80835">TAS1R1
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0262239639284958</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/254173">TTLL10
+</a> </td><td >1</td></tr>
+<tr>
+<td >0</td><td >0</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65122">PRAMEF2
+</a> </td><td >16</td></tr>
+<tr>
+<td >1.43098938887309e-06</td><td >0.027039975492146</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339451">KLHL17
+</a> </td><td >3</td></tr>
+<tr>
+<td >3.1996627569697e-13</td><td >6.04608274556995e-09</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/728642">CDK11A
+</a> </td><td >6</td></tr>
+<tr>
+<td >2.37879156924636e-05</td><td >0.449496454924793</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/80772">GLTPD1
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.00532623502550367</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9636">ISG15
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.0240090298619622</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9927">MFN2
+</a> </td><td >1</td></tr>
+<tr>
+<td >2.03536027281181e-05</td><td >0.384601677150521</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/473">RERE
+</a> </td><td >3</td></tr>
+<tr>
+<td >0.0252168435666965</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/9563">H6PD
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.000118465230610987</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/5226">PGD
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.000108368041892848</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/7133">TNFRSF1B
+</a> </td><td >2</td></tr>
+<tr>
+<td >0.0437948274201446</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/57540">PTCHD2
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.000104330765061889</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/2563">GABRD
+</a> </td><td >2</td></tr>
+<tr>
+<td >6.0126186252063e-09</td><td >0.000113614441541898</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/387509">GPR153
+</a> </td><td >4</td></tr>
+<tr>
+<td >0.000250130844902219</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23013">SPEN
+</a> </td><td >3</td></tr>
+<tr>
+<td >0.0112631509893374</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/79814">AGMAT
+</a> </td><td >1</td></tr>
+<tr>
+<td >0.00623615357605856</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/93190">C1orf158
+</a> </td><td >1</td></tr>
+<tr>
+<td >4.25304236273405e-12</td><td >8.03654884862226e-08</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/8863">PER3
+</a> </td><td >6</td></tr>
+<tr>
+<td >0.00251072265928276</td><td >1</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/23095">KIF1B
+</a> </td><td >2</td></tr>
+<tr>
+<td >2.38812600805716e-07</td><td >0.0045126029048248</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/126767">AADACL3
+</a> </td><td >3</td></tr>
+<tr>
+<td >1.703127638919e-09</td><td >3.21822998650134e-05</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/65220">NADK
+</a> </td><td >4</td></tr>
+<tr>
+<td >9.79781100696187e-09</td><td >0.000185139436787551</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/10747">MASP2
+</a> </td><td >4</td></tr>
+<tr>
+<td >4.76585735691426e-05</td><td >0.900556406162519</td><td ><a href="http://www.ncbi.nlm.nih.gov/gene/339457">C1orf222
+</a> </td><td >2</td></tr>

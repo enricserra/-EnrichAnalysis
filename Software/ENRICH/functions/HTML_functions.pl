@@ -7,7 +7,7 @@ sub close_html
 
 sub start_html_row
 {if($_[0]){print OUT "<tr class=\"$_[0]\">\n";}
-print OUT "<tr>\n";}
+else{print OUT "<tr>\n";}}
 
 sub end_html_row
 {print OUT "</tr>\n";}
@@ -23,14 +23,15 @@ sub gene2html
 
 
 sub dump_number
-{my $number = $_[0];start_cell();print OUT "$number";end_cell();}
+{my $number =  $_[0];start_cell();print OUT "$number";end_cell();}
 
 sub dump_genelist
 {
  if(scalar(@_) <10){
 start_cell();my $i=0;while($i<@_){dump_gene($_[$i]);$i++;}end_cell();}
  else{
-my $genelist = join(@_," ");
+  my $i = 0;while($i<@_){$_[$i] = $gene_number_2_gene_name{$_[$i]};chomp($_[$i]);$i++;}
+my $genelist = join(" ",@_);
 my $scalar= scalar(@_);start_cell();print OUT "<p title=\"$genelist\"> $scalar </p>\n";end_cell();}
 }
 
